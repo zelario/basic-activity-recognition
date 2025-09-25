@@ -1,0 +1,20 @@
+import csv
+import numpy as np
+
+def load_participant_data(part_number):
+
+    data = []
+
+    for device in range(1, 6):
+        filename = f"data/part{part_number}/part{part_number}dev{device}.csv"
+        
+        try:
+            with open(filename, 'r') as file:
+                csv_reader = csv.reader(file)
+                for row in csv_reader:
+                    data.append([float(x) for x in row])
+        except FileNotFoundError:
+            print(f"Arquivo não encontrado.")
+            continue
+    
+    return np.array(data)
