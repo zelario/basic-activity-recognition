@@ -1,7 +1,7 @@
 import csv
 import numpy as np
 
-def load_participant_data(part_number):
+def load_part_data(part_number):
 
     data = []
 
@@ -18,3 +18,7 @@ def load_participant_data(part_number):
             continue
     
     return np.array(data)
+
+def load_data():
+    full_data = [load_part_data(i) for i in range(14)]
+    return np.concatenate(full_data, axis=0)
