@@ -85,3 +85,23 @@ def plot_zscore_outliers(data, trans_data, activity, outlier_idxs):
     plt.ylabel("Variable")
     plt.legend()
     plt.show()
+
+def k_means(trans_data, n):
+
+    n_samples = trans_data.shape[0]
+    # Inicialização aleatória dos centroides
+    rng = np.random.default_rng()
+    centroids = trans_data[rng.choice(n_samples, n, replace=False)]
+    labels = np.zeros(n_samples, dtype=int)
+    for _ in range(100):  # Máximo de 100 iterações
+        # Atribuição dos pontos ao centroide mais próximo
+        dists = np.abs(trans_data[:, None] - centroids[None, :])
+        new_labels = np.argmin(dists, axis=1)
+        # Recalcular centroides
+        new_centroids = np.array([trans_data[new_labels == i].mean() if np.any(new_labels == i) else centroids[i] for i in range(n)])
+        # Verificar convergência
+        if np.all(labels == new_labels):
+            break
+        labels = new_labels
+        centroids = new_centroids
+    return centroids, labels
