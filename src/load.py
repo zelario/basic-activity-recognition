@@ -1,8 +1,9 @@
 
 import polars as pl
+import csv
 import numpy as np
 
-def load_part_data(part_number):
+def load_part_data_polars(part_number):
     dfs = []
     for device in range(1, 6):
         filename = f"data/part{part_number}/part{part_number}dev{device}.csv"
@@ -18,13 +19,12 @@ def load_part_data(part_number):
     else:
         return np.empty((0,))
 
-def load_data():
-    full_data = [load_part_data(i) for i in range(14)]
+def load_data_polars():
+    full_data = [load_part_data_polars(i) for i in range(14)]
     return np.concatenate([d for d in full_data if d.size > 0], axis=0)
 
-'''
 
-def load_part_data(part_number):
+def load_part_data_csv(part_number):
 
     data = []
 
@@ -42,8 +42,6 @@ def load_part_data(part_number):
     
     return np.array(data)
 
-def load_data():
-    full_data = [load_part_data(i) for i in range(14)]
+def load_data_csv():
+    full_data = [load_part_data_csv(i) for i in range(14)]
     return np.concatenate(full_data, axis=0)
-
-'''
