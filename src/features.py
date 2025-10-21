@@ -32,7 +32,6 @@ def choose_and_test(data, values, alpha=0.05):
     Regra simples: se >=80% dos grupos forem ~normais (KS), usa ANOVA; senão, Kruskal.
     Retorna (metodo, stat, p, pct_norm).
     """
-    from scipy.stats import kstest, norm
 
     # Teste de normalidade por atividade (1..16)
     resultado_norm = {}
