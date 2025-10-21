@@ -3,6 +3,7 @@ import matplotlib as mpl
 from load import *
 from outliers import *
 from mpl_toolkits.mplot3d import Axes3D  
+from features import *
 
 if __name__ == "__main__":
 
@@ -64,3 +65,25 @@ if __name__ == "__main__":
     plot_clusters(acc_centers, gyro_centers, mag_centers)
 
     #Exercicio 4.1
+    
+    print("\n--- Statistical Analysis per Activity ---\n")
+    alpha=0.05
+    variaveis = [
+		("Aceleração (|Acc|)", acc_modules),
+		("Velocidade Angular (|Gyro|)", gyro_modules),
+		("Campo Magnético (|Mag|)", mag_modules)
+	]
+    for nome, dados in variaveis:
+        metodo, stat, p, pct_norm = choose_and_test(data, dados, alpha)
+        
+        print(f"\n--- {nome} ---")
+        print(f"Normalidade (KS): {pct_norm}% dos grupos têm p > {alpha}")
+        print(f"Método aplicado: {metodo}")
+        print(f"Estatística = {stat} | p = {p}")
+        
+        if p < alpha:
+            print("-Diferenças significativas entre atividades.")
+        else:
+            print("-Sem diferenças significativas entre atividades.")
+            
+    #Exercicio 4.2
