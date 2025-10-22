@@ -5,7 +5,6 @@ from sklearn.cluster import KMeans
 from scipy.stats import f_oneway, kruskal, levene, kstest, shapiro
 from scipy import stats
 
-
 def per_activity_means(trans_data, values):
 	activities = np.arange(1, 17)
 	means = []
@@ -17,7 +16,6 @@ def per_activity_means(trans_data, values):
 		else:
 			means.append(np.mean(vals))
 	return activities, np.array(means)
-
 
 # --- Exercise 4.1: significance of means across activities (minimal) ---
 
