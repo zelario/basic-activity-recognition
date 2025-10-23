@@ -95,3 +95,23 @@ if __name__ == "__main__":
 
     Z, W, evr, mu = run_43_pca(X, y, k=2, show_plots=True)
     # Z é (n_amostras x k) — p.ex. podes guardar para 4.4/4.5/4.
+
+		
+	#Exercicio 4.4
+
+    idx_sorted, scores_sorted = run_44_fisher_scores(X, y, feature_names=feat_names, top=12, show_plot=True)
+
+    # Se quiseres selecionar as melhores k features:
+    k = 12
+    best_idx = idx_sorted[:k]
+    X_sel = X[:, best_idx]
+    # Agora X_sel pode seguir para classificação/análise posteriores.
+    
+    idx_sorted, scores_sorted = run_44_fisher_scores(X, y, feature_names=feat_names, top=12, show_plot=True)
+
+    # Se quiseres selecionar as melhores k features:
+    k = 12
+    best_idx = idx_sorted[:k]
+    X_sel = X[:, best_idx]
+    # Agora X_sel pode seguir para classificação/análise posteriores.
+
