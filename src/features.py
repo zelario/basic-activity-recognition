@@ -389,3 +389,102 @@ def run_44_fisher_scores(X, y, feature_names=None, top=10, show_plot=True):
             print(f"(Aviso) Não foi possível desenhar o gráfico: {e}")
 
     return idx_sorted, scores_sorted
+
+
+
+# --- Exercise 4.5: ReliefF (seleção de features baseada em vizinhança) ---
+
+from sklearn.neighbors import NearestNeighbors
+
+def _relieff_weights(X, y, n_neighbors=10):
+    """
+    Implementação simples do ReliefF.
+    - X: matriz de features (n_amostras x n_features)
+    - y: labels (inteiros)
+    - n_neighbors: nº de vizinhos usados (típico 5-10)
+    Retorna: vetor de pesos (importância de cada feature)
+    """
+    X = np.array(X, dtype=float)
+    y = np.array(y, dtype=int)
+    n, d = X.shape
+    weights = np.zeros(d)
+
+    # Distâncias normalizadas (cada feature em [0,1])
+    X_min = np.nanmin(X, axis=0)
+    X_max = np.nanmax(X, axis=0)
+    denom = np.where(X_max - X_min == 0, 1, X_max - X_min)
+    Xn = (X - X_min) / denom
+
+    # Usar k-vizinhos mais próximos (distância Euclidiana)
+    knn = NearestNeighbors(n_neighbors=n_neighbors + 1)
+    knn.fit(Xn)
+
+    for i in range(n):
+        xi = Xn[i]
+        yi = y[i]
+        distances, indices = knn.kneighbors([xi], return_distance=True)
+        indices = indices[0][1:]  # ignora o próprio ponto
+
+        # hits = da mesma classe
+        hits = [j for j in indices if y[j] == yi]
+        # misses = de outras classes
+        misses = [j for j in indices if y[j] != yi]
+
+        # se não houver hits/misses suficientes, ignora
+        if len(hits) == 0 or len(misses) == 0:
+            continue
+
+        for f in range(d):
+            # média da diferença absoluta
+            diff_hit = np.mean(np.abs(Xn[i, f] - Xn[hits, f]))
+            diff_miss = np.mean(np.abs(Xn[i, f] - Xn[misses, f]))
+            weights[f] += diff_miss - diff_hit
+
+    # normalizar pesos para [0,1]
+    w_min, w_max = np.min(weights), np.max(weights)
+    if w_max - w_min > 1e-12:
+        weights = (weights - w_min) / (w_max - w_min)
+    else:
+        weights[:] = 0.0
+    return weights
+
+
+def run_45_relieff(X, y, feature_names=None, top=10, n_neighbors=10, show_plot=True):
+    """
+    4.5 — Calcula pesos ReliefF e mostra as Top-k features mais relevantes.
+    - X, y: dados do 4.2 (idealmente normalizados)
+    - feature_names: nomes das features (opcional)
+    - top: nº de features a mostrar
+    - n_neighbors: nº de vizinhos (típico 5-10)
+    """
+    print("\n--- Exercício 4.5: ReliefF ---")
+    if X.size == 0 or y.size == 0:
+        raise ValueError("4.5: X/y vazios.")
+
+    weights = _relieff_weights(X, y, n_neighbors=n_neighbors)
+    idx_sorted = np.argsort(weights)[::-1]
+    scores_sorted = weights[idx_sorted]
+
+    k = min(top, len(idx_sorted))
+    print(f"Top {k} features por peso ReliefF:")
+    for i in range(k):
+        j = idx_sorted[i]
+        nome = feature_names[j] if (feature_names is not None and j < len(feature_names)) else f"feat_{j}"
+        print(f"{i+1:02d}. {nome:>20s}  |  peso = {scores_sorted[i]:.4f}")
+
+    if show_plot and k > 0:
+        try:
+            names_plot = [feature_names[j] if (feature_names is not None and j < len(feature_names)) else f"feat_{j}"
+                          for j in idx_sorted[:k]]
+            vals_plot = scores_sorted[:k]
+            plt.figure(figsize=(8, 4))
+            plt.bar(range(k), vals_plot, color='skyblue')
+            plt.xticks(range(k), names_plot, rotation=45, ha='right')
+            plt.ylabel("Peso ReliefF (importância)")
+            plt.title(f"Top {k} features por ReliefF (k={n_neighbors})")
+            plt.tight_layout()
+            plt.show()
+        except Exception as e:
+            print(f"(Aviso) Não foi possível desenhar o gráfico: {e}")
+
+    return idx_sorted, scores_sorted
