@@ -115,3 +115,12 @@ if __name__ == "__main__":
     X_sel = X[:, best_idx]
     # Agora X_sel pode seguir para classificação/análise posteriores.
 
+
+	#Exercicio 4.5
+    
+    idx_sorted, scores_sorted = run_45_relieff(X, y, feature_names=feat_names, top=12, n_neighbors=10)
+
+    # Para usar só as top 10 features:
+    best_idx = idx_sorted[:10]
+    X_relieff = X[:, best_idx]
+
