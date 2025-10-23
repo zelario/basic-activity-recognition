@@ -92,7 +92,6 @@ if __name__ == "__main__":
     data, acc_modules, mag_modules, gyro_modules, fs=50.0, win_s=5.0, overlap=0.5, zscore=True
 
 		 #Exercicio 4.3
-    from features import run_43_pca
 
     Z, W, evr, mu = run_43_pca(X, y, k=2, show_plots=True)
     # Z é (n_amostras x k) — p.ex. podes guardar para 4.4/4.5/4.
