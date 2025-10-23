@@ -86,4 +86,7 @@ if __name__ == "__main__":
         else:
             print("-Sem diferenças significativas entre atividades.")
             
-    #Exercicio 4.2
+     #Exercicio 4.2
+    
+    X, y, feat_names = run_42_extract_features(
+    data, acc_modules, mag_modules, gyro_modules, fs=50.0, win_s=5.0, overlap=0.5, zscore=True
