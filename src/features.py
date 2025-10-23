@@ -310,3 +310,82 @@ def run_43_pca(X, y=None, k=2, show_plots=True):
     print(f"4.2: X shape = {X.shape} | nº features = {X.shape[1]}")
     return X, y, feat_names
 
+
+
+# --- Exercise 4.4: Fisher Scores (ranking de features) ---
+
+def _fisher_scores(X, y):
+    """
+    Calcula Fisher Score para cada coluna de X.
+    X: (n_amostras x n_features), y: labels inteiros (atividades)
+    Retorna: scores (1D), onde scores[j] é o Fisher da feature j.
+    """
+    X = X.astype(float, copy=False)
+    y = y.astype(int, copy=False)
+    n, d = X.shape
+
+    # médias globais por feature
+    mu = np.mean(X, axis=0)  # (d,)
+
+    classes = np.unique(y)
+    # Acumuladores
+    num = np.zeros(d, dtype=float)  # between-class (numerador)
+    den = np.zeros(d, dtype=float)  # within-class (denominador)
+
+    for c in classes:
+        mask = (y == c)
+        Xc = X[mask]
+        if Xc.shape[0] == 0:
+            continue
+        nc = Xc.shape[0]
+        muc = np.mean(Xc, axis=0)            # (d,)
+        varc = np.var(Xc, axis=0, ddof=1)    # (d,)
+        # soma ponderada
+        num += nc * (muc - mu) ** 2
+        den += nc * varc
+
+    # evitar divisão por zero
+    den = np.where(den <= 1e-12, 1e-12, den)
+    scores = num / den
+    return scores
+
+def run_44_fisher_scores(X, y, feature_names=None, top=10, show_plot=True):
+    """
+    4.4 — Calcula e lista as Top-k features por Fisher Score.
+    - X, y: do 4.2 (idealmente já normalizado a z-score)
+    - feature_names: lista de nomes (opcional, mas recomendado)
+    - top: quantas features mostrar
+    - show_plot: desenha gráfico de barras das Top-k
+    Retorna: idx_sorted (índices das features por ordem desc), scores_sorted
+    """
+    if X.size == 0 or y.size == 0:
+        raise ValueError("4.4: X/y vazios.")
+
+    scores = _fisher_scores(X, y)                # (d,)
+    idx_sorted = np.argsort(scores)[::-1]        # descrescente
+    scores_sorted = scores[idx_sorted]
+
+    k = min(top, len(idx_sorted))
+    print("\n--- Exercício 4.4: Fisher Scores (ranking de features) ---")
+    print(f"Top {k} features por Fisher Score:")
+    for i in range(k):
+        j = idx_sorted[i]
+        nome = feature_names[j] if (feature_names is not None and j < len(feature_names)) else f"feat_{j}"
+        print(f"{i+1:02d}. {nome:>20s}  |  score = {scores_sorted[i]:.4f}")
+
+    if show_plot and k > 0:
+        try:
+            names_plot = [feature_names[j] if (feature_names is not None and j < len(feature_names)) else f"feat_{j}"
+                          for j in idx_sorted[:k]]
+            vals_plot = scores_sorted[:k]
+            plt.figure(figsize=(8, 4))
+            plt.bar(range(k), vals_plot)
+            plt.xticks(range(k), names_plot, rotation=45, ha='right')
+            plt.ylabel("Fisher Score")
+            plt.title(f"Top {k} features por Fisher Score")
+            plt.tight_layout()
+            plt.show()
+        except Exception as e:
+            print(f"(Aviso) Não foi possível desenhar o gráfico: {e}")
+
+    return idx_sorted, scores_sorted
