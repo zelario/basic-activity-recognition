@@ -206,6 +206,106 @@ def run_42_extract_features(data, acc_modules, mag_modules, gyro_modules, fs, wi
     if zscore:
         X = _zscore_columns(X)
 
+
+	# --- Exercise 4.3: PCA (redução de dimensionalidade + visualização) ---
+
+def _pca_fit_transform(X, n_components=None):
+    """
+    PCA "na mão" (NumPy):
+    - Centraliza X
+    - Faz eigendecomposition da covariância
+    - Ordena por variância explicada desc.
+    - Retorna projeção Z, componentes W, variâncias (evals) e ratios (evr)
+    """
+    if X.size == 0:
+        raise ValueError("X vazio em 4.3 (PCA).")
+
+    # 1) Centralizar
+    X = X.astype(float, copy=True)
+    mu = np.mean(X, axis=0)
+    Xc = X - mu
+
+    # 2) Covariância (d x d)
+    C = (Xc.T @ Xc) / max(1, (Xc.shape[0] - 1))
+
+    # 3) Autovalores/Autovetores (C é simétrica → eigh)
+    evals, evecs = np.linalg.eigh(C)  # evals ascendente
+
+    # 4) Ordenar por variância decrescente
+    idx = np.argsort(evals)[::-1]
+    evals = evals[idx]
+    W = evecs[:, idx]   # colunas: componentes
+
+    # 5) Projeção
+    if n_components is None or n_components > W.shape[1]:
+        n_components = W.shape[1]
+    Wk = W[:, :n_components]
+    Z = Xc @ Wk
+
+    # 6) Variância explicada
+    total = np.sum(evals) if np.sum(evals) > 0 else 1.0
+    evr = evals / total  # explained variance ratio por componente
+
+    return Z, Wk, evals, evr, mu
+
+
+def run_43_pca(X, y=None, k=2, show_plots=True):
+    """
+    4.3 — Aplica PCA ao X do 4.2.
+    - Imprime variância explicada por componente e acumulada
+    - Sugere nº mínimo de componentes para atingir ~90%
+    - Opcional: faz 'scree plot' e 'scatter' PC1 vs PC2 colorido por atividade
+    Retorna: Z (projeção k-dim), W (componentes), evr (ratios), mu (médias)
+    """
+    Z, W, evals, evr, mu = _pca_fit_transform(X, n_components=k)
+
+    # Variância explicada (top 10 ou menos)
+    m = len(evr)
+    top = min(10, m)
+    print("\n--- Exercício 4.3: PCA ---")
+    print("Variância explicada por componente (primeiras {}):".format(top))
+    for i in range(top):
+        print(f"PC{i+1:02d}: {evr[i]*100:.2f}%")
+
+    # Acumulada e sugestão para 90%
+    cum = np.cumsum(evr)
+    k90 = int(np.searchsorted(cum, 0.90) + 1)  # nº de comps p/ >=90%
+    print(f"Acumulada (PC1..PC{k}): {cum[k-1]*100:.2f}%")
+    print(f"Sugestão: usar {k90} componentes para >=90% de variância explicada (se disponível).")
+
+    if show_plots:
+        try:
+            # Scree plot
+            plt.figure(figsize=(6, 4))
+            plt.plot(np.arange(1, m+1), evr*100, marker='o')
+            plt.xlabel("Componente Principal")
+            plt.ylabel("Variância explicada (%)")
+            plt.title("PCA — Scree plot")
+            plt.tight_layout()
+            plt.show()
+
+            # Scatter PC1 vs PC2
+            if Z.shape[1] >= 2:
+                plt.figure(figsize=(6, 5))
+                if y is None:
+                    plt.scatter(Z[:, 0], Z[:, 1], s=10, alpha=0.7)
+                else:
+                    labs = np.unique(y.astype(int))
+                    for lab in labs:
+                        mask = (y == lab)
+                        plt.scatter(Z[mask, 0], Z[mask, 1], s=12, alpha=0.7, label=f"Atv {lab:02d}")
+                    plt.legend(markerscale=1.5, fontsize=8, ncol=2)
+                plt.xlabel("PC1")
+                plt.ylabel("PC2")
+                plt.title("PCA — PC1 vs PC2")
+                plt.tight_layout()
+                plt.show()
+        except Exception as e:
+            print(f"(Aviso) Não foi possível desenhar os gráficos: {e}")
+
+    return Z, W, evr, mu
+
+
     print(f"4.2: janelas válidas = {kept} | descartadas (multi-label ou vazias) = {discarded}")
     print(f"4.2: X shape = {X.shape} | nº features = {X.shape[1]}")
     return X, y, feat_names
