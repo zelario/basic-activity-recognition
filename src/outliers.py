@@ -82,7 +82,6 @@ def z_score(data, var_modules, activity, k):
     std = np.std(activity_data)
     z_scores = (activity_data - mean) / std 
     outlier_idxs = np.where(np.abs(z_scores) > k)[0]
-    print(f"\n---Outliers detected on activity {activity} by z-score: ---\n", outlier_idxs)
     return outlier_idxs
 
 def plot_zscore_outliers(data, var_modules, variable_name, activity, outlier_idxs):
@@ -115,20 +114,46 @@ def kmeans(var_modules, n_clusters):
 
     return labels, centers
 
-def plot_clusters(acc_centers, gyro_centers, mag_centers):
+def plot_clusters_activity_outliers(data, acc_modules, gyro_modules, mag_modules,
+                                    activity_choice, acc_outlier_idxs, gyro_outlier_idxs, mag_outlier_idxs):
+    """
+    Plota clusters 3D e destaca apenas os outliers de uma atividade específica.
+    
+    - acc_modules, gyro_modules, mag_modules: arrays dos módulos de todos os samples
+    - activity_choice: índice da atividade a destacar (1-16)
+    - *_outlier_idxs: índices relativos apenas à atividade escolhida
+    """
+
+    # Seleciona índices de todos os samples da atividade escolhida
+    activity_mask = data[:, 11] == activity_choice
+    activity_idxs = np.where(activity_mask)[0]
+
+    # Combina outliers de todos os módulos
+    combined_outliers = np.unique(np.concatenate([acc_outlier_idxs, gyro_outlier_idxs, mag_outlier_idxs]))
+
+    # Dados 3D completos
+    data_3d = np.column_stack([acc_modules, gyro_modules, mag_modules])
 
     fig = plt.figure(figsize=(10, 7))
     ax = fig.add_subplot(111, projection='3d')
 
-    n_clusters = min(len(acc_centers), len(gyro_centers), len(mag_centers))
+    # Pontos normais (todos exceto outliers da atividade escolhida)
+    mask_normal = np.ones(len(data_3d), dtype=bool)
+    mask_normal[activity_idxs[combined_outliers]] = False
+    ax.scatter(data_3d[mask_normal, 0], data_3d[mask_normal, 1], data_3d[mask_normal, 2],
+               s=50, alpha=0.5, label='Normal')
 
-    for i in range(n_clusters):
-        ax.scatter(acc_centers[i], gyro_centers[i], mag_centers[i],
-                   s=100, label=f'Cluster {i}')
+    # Pontos outliers da atividade escolhida
+    ax.scatter(data_3d[activity_idxs[combined_outliers], 0],
+               data_3d[activity_idxs[combined_outliers], 1],
+               data_3d[activity_idxs[combined_outliers], 2],
+               color='red', s=100, marker='X', label='Outlier da atividade')
 
     ax.set_xlabel('|Acceleration|')
     ax.set_ylabel('|Angular Velocity|')
     ax.set_zlabel('|Magnetic Field|')
-    plt.title('Clusters')
+    plt.title(f'Clusters com outliers da atividade {activity_choice}')
     ax.legend()
     plt.show()
+
+

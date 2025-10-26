@@ -24,10 +24,15 @@ if __name__ == "__main__":
     mag_modules = variable_module(data, "Magnetic Field")
     gyro_modules = variable_module(data, "Angular Velocity")
 
+    variables_data = [
+		("Aceleração (|Acc|)", acc_modules),
+		("Velocidade Angular (|Gyro|)", gyro_modules),
+		("Campo Magnético (|Mag|)", mag_modules)
+	]
+
     device_choice = int(input("Escolha o dispositivo (1-5): "))
-    boxplot_variable(data, acc_modules, "Acceleration", device_choice)
-    boxplot_variable(data, mag_modules, "Magnetic Field", device_choice)
-    boxplot_variable(data, gyro_modules, "Angular Velocity", device_choice)
+    for name, modules in variables_data:
+        boxplot_variable(data, modules, name, device_choice)
 
     #Exercicio 3.2
 
@@ -40,6 +45,7 @@ if __name__ == "__main__":
     k=3
 
     activity_choice = int(input("Escolha a atividade (1-16): "))
+
     acc_outlier_idxs = z_score(data, acc_modules, activity_choice, k)
     mag_outlier_idxs = z_score(data, mag_modules, activity_choice, k)
     gyro_outlier_idxs = z_score(data, gyro_modules, activity_choice, k)
@@ -62,65 +68,44 @@ if __name__ == "__main__":
     print(f"\n--- Angular Velocity K-Means Results ---")
     gyro_labels, gyro_centers = kmeans(gyro_modules, n_clusters)
 
-    plot_clusters(acc_centers, gyro_centers, mag_centers)
+    activity_choice = int(input("Escolha a atividade para destacar outliers (1-16): "))
+
+    plot_clusters_activity_outliers(
+        data, acc_modules, gyro_modules, mag_modules,
+        activity_choice, acc_outlier_idxs, gyro_outlier_idxs, mag_outlier_idxs
+    )
 
     #Exercicio 4.1
     
-    print("\n--- Statistical Analysis per Activity ---\n")
+    print("\n--- Analise Estatistica ---\n")
     alpha=0.05
-    variaveis = [
-		("Aceleração (|Acc|)", acc_modules),
-		("Velocidade Angular (|Gyro|)", gyro_modules),
-		("Campo Magnético (|Mag|)", mag_modules)
-	]
-    for nome, dados in variaveis:
-        metodo, stat, p, pct_norm = choose_and_test(data, dados, alpha)
-        
-        print(f"\n--- {nome} ---")
+    for name, modules in variables_data:
+        method, stat, p, pct_norm = choose_and_test_method(data, modules, alpha)
+
+        print(f"\n--- {name} ---")
         print(f"Normalidade (KS): {pct_norm}% dos grupos têm p > {alpha}")
-        print(f"Método aplicado: {metodo}")
+        print(f"Método aplicado: {method}")
         print(f"Estatística = {stat} | p = {p}")
-        
+
         if p < alpha:
             print("-Diferenças significativas entre atividades.")
         else:
             print("-Sem diferenças significativas entre atividades.")
-            
-     #Exercicio 4.2
-    
-    X, y, feat_names = run_42_extract_features(
-    data, acc_modules, mag_modules, gyro_modules, fs=50.0, win_s=5.0, overlap=0.5, zscore=True
 
-		 #Exercicio 4.3
+    # Exercicio 4.2
+    features, labels, feature_names = extract_features(
+        data, acc_modules, mag_modules, gyro_modules,
+        fs=50.0, window_duration=5.0, overlap_ratio=0.5, normalize_zscore=True
+    )
 
-    Z, W, evr, mu = run_43_pca(X, y, k=2, show_plots=True)
-    # Z é (n_amostras x k) — p.ex. podes guardar para 4.4/4.5/4.
+    # Exercicio 4.3
 
-		
-	#Exercicio 4.4
+    projected_data, components, explained_variance = pca(features, labels, n_components=2)
 
-    idx_sorted, scores_sorted = run_44_fisher_scores(X, y, feature_names=feat_names, top=12, show_plot=True)
+    # Exercicio 4.4
 
-    # Se quiseres selecionar as melhores k features:
-    k = 12
-    best_idx = idx_sorted[:k]
-    X_sel = X[:, best_idx]
-    # Agora X_sel pode seguir para classificação/análise posteriores.
-    
-    idx_sorted, scores_sorted = run_44_fisher_scores(X, y, feature_names=feat_names, top=12, show_plot=True)
+    analysis = pca_analysis(features, feature_names, variance_threshold=0.75, instant_index=5)
 
-    # Se quiseres selecionar as melhores k features:
-    k = 12
-    best_idx = idx_sorted[:k]
-    X_sel = X[:, best_idx]
-    # Agora X_sel pode seguir para classificação/análise posteriores.
-
-
-	#Exercicio 4.5
-    
-    idx_sorted, scores_sorted = run_45_relieff(X, y, feature_names=feat_names, top=12, n_neighbors=10)
-
-    # Para usar só as top 10 features:
-    best_idx = idx_sorted[:10]
-    X_relieff = X[:, best_idx]
+    # Exercicio 4.5
+    fisher_relief = fisher_and_relief(features, labels, feature_names, top_features=10)
 

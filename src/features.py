@@ -1,490 +1,340 @@
 import numpy as np
-import matplotlib as mpl
+from numpy.lib.stride_tricks import sliding_window_view
 import matplotlib.pyplot as plt
-from sklearn.cluster import KMeans
-from scipy.stats import f_oneway, kruskal, levene, kstest, shapiro
-from scipy import stats
+from scipy.stats import f_oneway, kruskal, kstest
+from sklearn.decomposition import PCA
+from skfeature.function.similarity_based import fisher_score
+from sklearn.metrics import mean_squared_error
+from skrebate import ReliefF
+
+# --- Exercise 4.1: Statistical Tests ---
+
+def choose_and_test_method(data, modules, alpha=0.05):
+    normality_results = {}
+    for activity in range(1, 17):
+        activity_modules = modules[data[:, 11] == activity]
+        z_values = (activity_modules - np.mean(activity_modules)) / np.std(activity_modules)
+        stat, p_value = kstest(z_values, "norm")
+        normality_results[activity] = (stat, p_value)
 
 
-def per_activity_means(trans_data, values):
-	activities = np.arange(1, 17)
-	means = []
-	for act in activities:
-		mask = trans_data[:, 11] == act
-		vals = values[mask]
-		if vals.size == 0:
-			means.append(np.nan)
-		else:
-			means.append(np.mean(vals))
-	return activities, np.array(means)
+    p_values = [p for (_, p) in normality_results.values() if not np.isnan(p)]
+    percentage_normal = 100.0 * sum(p > alpha for p in p_values) / len(p_values) if p_values else 0.0
 
+    activity_groups = [modules[data[:, 11] == activity]
+                       for activity in range(1, 17)
+                       if np.sum(data[:, 11] == activity) > 1]
 
-# --- Exercise 4.1: significance of means across activities (minimal) ---
+    use_anova = percentage_normal >= 80.0 and len(activity_groups) >= 2
 
-def _percent_norm_ok(resultado_norm, alpha=0.05):
-    """% de grupos (atividades) com normalidade (p > alpha) no KS."""
-    ps = [p for (_, p) in resultado_norm.values() if not np.isnan(p)]
-    return 0.0 if not ps else 100.0 * sum(p > alpha for p in ps) / len(ps)
-
-def choose_and_test(data, values, alpha=0.05):
-    """
-    Decide ANOVA (paramétrica) ou Kruskal–Wallis (não paramétrica) por variável.
-    Regra simples: se >=80% dos grupos forem ~normais (KS), usa ANOVA; senão, Kruskal.
-    Retorna (metodo, stat, p, pct_norm).
-    """
-
-    # Teste de normalidade por atividade (1..16)
-    resultado_norm = {}
-    for act in range(1, 17):
-        grupo = values[data[:, 11] == act]
-        if len(grupo) > 1:
-            # Normaliza o grupo (z-score)
-            grupo_z = (grupo - np.mean(grupo)) / np.std(grupo)
-            stat, p = kstest(grupo_z, "norm")
-            resultado_norm[act] = (stat, p)
-        else:
-            resultado_norm[act] = (np.nan, np.nan)
-
-    pct_norm = _percent_norm_ok(resultado_norm, alpha)
-
-    # Agrupar amostras por atividade (apenas grupos com n>=2)
-    grupos = [values[data[:, 11] == act]
-              for act in range(1, 17)
-              if np.sum(data[:, 11] == act) > 1]
-
-    # Regra: se >=80% normais → ANOVA; caso contrário → Kruskal
-    usa_anova = pct_norm >= 80.0 and len(grupos) >= 2
-    if usa_anova:
-        stat, p = f_oneway(*grupos)
-        metodo = "ANOVA"
+    if use_anova:
+        stat, p_value = f_oneway(*activity_groups)
+        method = "ANOVA"
     else:
-        stat, p = kruskal(*grupos)
-        metodo = "Kruskal–Wallis"
+        stat, p_value = kruskal(*activity_groups)
+        method = "Kruskal-Wallis"
 
-    return metodo, stat, p, pct_norm	
+    return method, stat, p_value, percentage_normal
 
+# --- Exercise 4.2: Feature Extraction ---
 
-# --- Exercise 4.2: extração de features por janelas (5s, 50% overlap) ---
+def sliding_windows(labels, fs, window_duration=5.0, overlap=0.5):
+    labels = np.asarray(labels)
+    window_size = int(round(window_duration * fs))
 
-def _sliding_windows_single_label(labels, fs, win_s=5.0, overlap=0.5):
-    """
-    Gera janelas [start, end) com 5s e 50% overlap, mantendo APENAS janelas
-    cujo rótulo (coluna 11 de 'data') é constante em toda a janela.
-    Retorna: lista de (i0, i1, label)
-    """
-    win_n = int(round(win_s * fs))
-    step = max(1, int(round(win_n * (1.0 - overlap))))
-    out = []
-    n = len(labels)
-    for i0 in range(0, max(0, n - win_n + 1), step):
-        i1 = i0 + win_n
-        bloco = labels[i0:i1]
-        if bloco.size < win_n:
-            continue
-        lab = bloco[0]
-        # descartar janelas com mais do que um label
-        if np.all(bloco == lab):
-            out.append((i0, i1, lab))
+    step = max(1, int(round(window_size * (1.0 - overlap))))
+
+    windows = sliding_window_view(labels, window_shape=window_size)
+
+    starts = np.arange(0, windows.shape[0], step)
+    candidate_windows = windows[starts]
+
+    mask = np.all(candidate_windows == candidate_windows[:, :1], axis=1)
+    valid_starts = starts[mask]
+
+    out = [(int(s), int(s + window_size), int(labels[s])) for s in valid_starts]
     return out
 
-def _iqr(x):
-    return np.percentile(x, 75) - np.percentile(x, 25)
+def extract_window_features(signal):
 
-def _dominant_freq(x, fs):
-    # FFT real; devolve frequência do pico (exclui DC)
-    n = len(x)
-    if n == 0:
-        return np.nan
-    X = np.fft.rfft(x)
-    freqs = np.fft.rfftfreq(n, d=1.0/fs)
-    if freqs.size <= 1:
-        return np.nan
-    # potência
-    P = (np.abs(X) ** 2) / n
-    # ignorar DC (índice 0)
-    peak_idx = np.argmax(P[1:]) + 1
-    return freqs[peak_idx]
+    # Mean value
+    mean_value = np.mean(signal)
 
-def _spectral_entropy(x, fs, eps=1e-12):
-    # entropia de potência normalizada (log base e)
-    n = len(x)
-    if n == 0:
-        return np.nan
-    X = np.fft.rfft(x)
-    P = (np.abs(X) ** 2)
-    P = P / (np.sum(P) + eps)
-    return -np.sum(P * np.log(P + eps))
+    # Standard deviation
+    std_value = np.std(signal, ddof=1) if signal.size > 1 else 0.0
 
-def _features_1d(x, fs):
-    """
-    Features simples e robustas para um vetor 1D.
-    Retorna tuplo (valores, nomes) num ordem estável.
-    """
-    if x.size == 0:
-        vals = [np.nan]*9
-    else:
-        mean = np.mean(x)
-        std = np.std(x, ddof=1) if x.size > 1 else 0.0
-        med = np.median(x)
-        iqr = _iqr(x)
-        sma = np.mean(np.abs(x))        # Signal Magnitude Area (1D)
-        energy = np.sum(x**2) / x.size  # energia média
-        zc = np.sum(np.sign(x[:-1]) * np.sign(x[1:]) < 0) if x.size > 1 else 0  # zero-crossings
-        df = _dominant_freq(x, fs)
-        sent = _spectral_entropy(x, fs)
-        vals = [mean, std, med, iqr, sma, energy, zc, df, sent]
+    # Median value
+    median_value = np.median(signal)
 
-    names = [
-        "mean", "std", "median", "iqr", "sma",
-        "energy", "zero_cross", "dom_freq", "spec_entropy"
+    # Variance
+    variance_value = np.var(signal, ddof=1) if signal.size > 1 else 0.0
+
+    # Root Mean Square (RMS)
+    rms_value = np.sqrt(np.mean(signal ** 2))
+
+    # Averaged Deviation
+    average_deviation_value = np.mean(np.abs(signal - mean_value))
+
+    # Skewness
+    skewness_value = (np.mean((signal - mean_value) ** 3) / (std_value ** 3)) if std_value > 0 else 0.0
+
+    # Kurtosis
+    kurtosis_value = (np.mean((signal - mean_value) ** 4) / (std_value ** 4)) - 3 if std_value > 0 else 0.0
+
+    # Interquartile Range (IQR)
+    iqr_value = np.percentile(signal, 75) - np.percentile(signal, 25)
+
+    # Zero Crossing Rate (ZCR)
+    zero_crossings = np.sum(np.sign(signal[:-1]) * np.sign(signal[1:]) < 0) if signal.size > 1 else 0
+
+    # Mean Crossing Rate (MCR)
+    mean_crossings = np.sum((signal[:-1] - mean_value) * (signal[1:] - mean_value) < 0) if signal.size > 1 else 0
+
+    # Spectral Entropy
+    fft_values = np.fft.rfft(signal)
+    power = np.abs(fft_values) ** 2
+    power /= np.sum(power) + 1e-12
+    spectral_entropy = -np.sum(power * np.log(power + 1e-12))
+
+    feature_values = [mean_value, std_value, median_value, variance_value, rms_value, 
+                      average_deviation_value, skewness_value, kurtosis_value, iqr_value,
+                      zero_crossings, mean_crossings, spectral_entropy]
+
+    return feature_values
+
+
+def zscore_normalization(features, eps=1e-12):
+    features = features.astype(float, copy=True)
+    mean_values = np.nanmean(features, axis=0)
+    std_values = np.nanstd(features, axis=0, ddof=1)
+    std_values = np.where(std_values < eps, 1.0, std_values)
+    features = (features - mean_values) / std_values
+    return features
+
+
+def extract_features(data, acceleration_modules, magnetic_modules, gyroscope_modules,
+                                     fs, window_duration=5.0, overlap_ratio=0.5, normalize_zscore=True):
+    
+    base_feature_names = [
+        "mean", "std", "median", "variance", "rms", "average_deviation", "skewness", "kurtosis", "iqr",
+        "zero_crossing_rate", "mean_crossing_rate", "spectral_entropy"
     ]
-    return vals, names
 
-def _zscore_columns(X, eps=1e-12):
-    X = X.astype(float, copy=True)
-    mu = np.nanmean(X, axis=0)
-    sd = np.nanstd(X, axis=0, ddof=1)
-    sd = np.where(sd < eps, 1.0, sd)  # evita divisão por ~0
-    X = (X - mu) / sd
-    return X
+    feature_names = [f"acc_{name}" for name in base_feature_names] + \
+                    [f"gyro_{name}" for name in base_feature_names] + \
+                    [f"mag_{name}" for name in base_feature_names]
 
-def run_42_extract_features(data, acc_modules, mag_modules, gyro_modules, fs, win_s=5.0, overlap=0.5, zscore=True):
-    """
-    4.2 — Extrai features em janelas de 5s com 50% overlap.
-    - Descarta janelas que incluem mais do que uma atividade (label na col. 11 de 'data')
-    - Calcula features 1D por sinal: |Acc|, |Gyro|, |Mag|
-    - Normaliza (z-score) no fim (opcional)
-    Retorna: X (n_janelas x n_features), y (labels), feature_names (lista de strings)
-    """
-    # labels: coluna 11 do 'data' (0-based)
-    labels = data[:, 11].astype(int)
+    activity_labels = data[:, 11].astype(int)
+    windows = sliding_windows(activity_labels, fs, window_duration, overlap_ratio)
 
-    # janelas válidas (single-label)
-    janelas = _sliding_windows_single_label(labels, fs, win_s, overlap)
+    features = []
+    labels = []
 
-    feats = []
-    ys = []
+    valid_windows, discarded_windows = 0, 0
+    for (start_idx, end_idx, activity_label) in windows:
+        acceleration_window = acceleration_modules[start_idx:end_idx]
+        gyroscope_window = gyroscope_modules[start_idx:end_idx]
+        magnetic_window = magnetic_modules[start_idx:end_idx]
 
-    # nomes com prefixo por variável
-    vals_dummy, base_names = _features_1d(np.array([0.0, 1.0]), fs)
-    feat_names = [f"acc_{n}" for n in base_names] + \
-                 [f"gyro_{n}" for n in base_names] + \
-                 [f"mag_{n}" for n in base_names]
-
-    kept, discarded = 0, 0
-    for (i0, i1, lab) in janelas:
-        # corta janelas por sinal
-        x_acc = acc_modules[i0:i1]
-        x_gyr = gyro_modules[i0:i1]
-        x_mag = mag_modules[i0:i1]
-
-        # sanity: janelas vazias em algum sinal -> descarta
-        if x_acc.size == 0 or x_gyr.size == 0 or x_mag.size == 0:
-            discarded += 1
+        if acceleration_window.size == 0 or gyroscope_window.size == 0 or magnetic_window.size == 0:
+            discarded_windows += 1
             continue
 
-        acc_f, _ = _features_1d(x_acc, fs)
-        gyr_f, _ = _features_1d(x_gyr, fs)
-        mag_f, _ = _features_1d(x_mag, fs)
+        acc_features = extract_window_features(acceleration_window)
+        gyro_features = extract_window_features(gyroscope_window)
+        mag_features = extract_window_features(magnetic_window)
 
-        row = acc_f + gyr_f + mag_f
-        if np.any(np.isnan(row)):
-            # opcional: aceitar NaN; aqui mantemos para não perder demasiadas
-            pass
+        combined_features = acc_features + gyro_features + mag_features
+        features.append(combined_features)
+        labels.append(activity_label)
+        valid_windows += 1
 
-        feats.append(row)
-        ys.append(lab)
-        kept += 1
+    if len(features) == 0:
+        print("Nenhuma janela válida encontrada.")
+        return np.empty((0, len(feature_names))), np.array([]), feature_names
 
-    if len(feats) == 0:
-        print("4.2: Nenhuma janela válida encontrada. Verifica fs/win_s/overlap e labels.")
-        return np.empty((0, len(feat_names))), np.array([]), feat_names
+    features = np.array(features, dtype=float)
+    labels = np.array(labels, dtype=int)
 
-    X = np.array(feats, dtype=float)
-    y = np.array(ys, dtype=int)
+    if normalize_zscore:
+        features = zscore_normalization(features)
 
-    if zscore:
-        X = _zscore_columns(X)
+    return features, labels, feature_names
 
+# --- Exercise 4.3: PCA ---
 
-	# --- Exercise 4.3: PCA (redução de dimensionalidade + visualização) ---
+def pca(features, labels=None, n_components=2):
 
-def _pca_fit_transform(X, n_components=None):
+    pca = PCA(n_components=n_components)
+
+    projected_data = pca.fit_transform(features)
+
+    explained_variance_ratio = pca.explained_variance_ratio_
+    
+    print("\n--- PCA (scikit-learn) ---")
+    for i, var in enumerate(explained_variance_ratio):
+        print(f"PC{i+1}: {var*100:.2f}% da variância explicada")
+    
+    cumulative_variance = np.cumsum(explained_variance_ratio)
+    num_for_90 = np.searchsorted(cumulative_variance, 0.90) + 1
+    print(f"Número de componentes para >=90% de variância: {num_for_90}")
+
+    plt.figure(figsize=(6, 4))
+    plt.plot(np.arange(1, n_components+1), explained_variance_ratio*100, marker='o')
+    plt.xlabel("Componente Principal")
+    plt.ylabel("Variância Explicada (%)")
+    plt.title("PCA — Scree Plot")
+    plt.tight_layout()
+    plt.show()
+    
+    if projected_data.shape[1] >= 2:
+        plt.figure(figsize=(6, 5))
+        if labels is None:
+            plt.scatter(projected_data[:, 0], projected_data[:, 1], s=10, alpha=0.7)
+        else:
+            unique_labels = np.unique(labels)
+            for label in unique_labels:
+                mask = labels == label
+                plt.scatter(projected_data[mask, 0], projected_data[mask, 1], s=12, alpha=0.7,
+                            label=f"Atividade {label}")
+            plt.legend(markerscale=1.5, fontsize=8, ncol=2)
+        plt.xlabel("PC1")
+        plt.ylabel("PC2")
+        plt.title("PCA — PC1 vs PC2")
+        plt.tight_layout()
+        plt.show()
+    
+    return projected_data, pca.components_, explained_variance_ratio
+
+# --- Exercise 4.4: PCA analysis ---
+
+def pca_analysis(features, feature_names=None, variance_threshold=0.75, instant_index=0, verbose=True):
     """
-    PCA "na mão" (NumPy):
-    - Centraliza X
-    - Faz eigendecomposition da covariância
-    - Ordena por variância explicada desc.
-    - Retorna projeção Z, componentes W, variâncias (evals) e ratios (evr)
+    Performs PCA on already normalized features (z-score done earlier in extract_features).
+
+    1) Computes PCA with all components.
+    2) Determines how many components explain >= variance_threshold (e.g. 75%).
+    3) Returns compressed representation for a chosen instant and reconstruction.
+    4) Prints useful info about explained variance and reconstruction quality.
     """
-    if X.size == 0:
-        raise ValueError("X vazio em 4.3 (PCA).")
 
-    # 1) Centralizar
-    X = X.astype(float, copy=True)
-    mu = np.mean(X, axis=0)
-    Xc = X - mu
+    if features.size == 0:
+        raise ValueError("Matriz de features vazia.")
 
-    # 2) Covariância (d x d)
-    C = (Xc.T @ Xc) / max(1, (Xc.shape[0] - 1))
+    # --- features are already normalized ---
+    z_features = features.copy()
 
-    # 3) Autovalores/Autovetores (C é simétrica → eigh)
-    evals, evecs = np.linalg.eigh(C)  # evals ascendente
+    # --- PCA with all possible components ---
+    n_components_full = min(z_features.shape)
+    pca = PCA(n_components=n_components_full)
+    projected = pca.fit_transform(z_features)
+    explained_ratio = pca.explained_variance_ratio_
+    cumulative = np.cumsum(explained_ratio)
 
-    # 4) Ordenar por variância decrescente
-    idx = np.argsort(evals)[::-1]
-    evals = evals[idx]
-    W = evecs[:, idx]   # colunas: componentes
+    # --- number of components for threshold ---
+    num_components_for_threshold = int(np.searchsorted(cumulative, variance_threshold) + 1)
 
-    # 5) Projeção
-    if n_components is None or n_components > W.shape[1]:
-        n_components = W.shape[1]
-    Wk = W[:, :n_components]
-    Z = Xc @ Wk
+    if verbose:
+        print("\n--- PCA: explicação de variância ---")
+        for i, (er, cum) in enumerate(zip(explained_ratio, cumulative)):
+            print(f"PC{i+1:02d}: {er*100:6.3f}%   |  acumulada: {cum*100:6.3f}%")
+        print(f"\nNúmero de componentes necessárias para >= {variance_threshold*100:.1f}%: {num_components_for_threshold}")
 
-    # 6) Variância explicada
-    total = np.sum(evals) if np.sum(evals) > 0 else 1.0
-    evr = evals / total  # explained variance ratio por componente
+    # --- extract compressed vector for chosen instant ---
+    if instant_index < 0 or instant_index >= z_features.shape[0]:
+        raise IndexError("instant_index fora do intervalo (0 .. n_samples-1).")
 
-    return Z, Wk, evals, evr, mu
+    K = num_components_for_threshold
+    compressed_instant = projected[instant_index, :K]
 
+    # --- reconstruct (in z-score space) ---
+    components_K = pca.components_[:K, :]
+    scores_K = compressed_instant.reshape(1, -1)
+    approx_z = np.dot(scores_K, components_K).reshape(-1)
 
-def run_43_pca(X, y=None, k=2, show_plots=True):
-    """
-    4.3 — Aplica PCA ao X do 4.2.
-    - Imprime variância explicada por componente e acumulada
-    - Sugere nº mínimo de componentes para atingir ~90%
-    - Opcional: faz 'scree plot' e 'scatter' PC1 vs PC2 colorido por atividade
-    Retorna: Z (projeção k-dim), W (componentes), evr (ratios), mu (médias)
-    """
-    Z, W, evals, evr, mu = _pca_fit_transform(X, n_components=k)
+    # since features are already normalized, reconstruction = approx_z
+    approx_original = approx_z
+    original_instant = z_features[instant_index, :]
 
-    # Variância explicada (top 10 ou menos)
-    m = len(evr)
-    top = min(10, m)
-    print("\n--- Exercício 4.3: PCA ---")
-    print("Variância explicada por componente (primeiras {}):".format(top))
-    for i in range(top):
-        print(f"PC{i+1:02d}: {evr[i]*100:.2f}%")
+    mse = mean_squared_error(original_instant, approx_original)
 
-    # Acumulada e sugestão para 90%
-    cum = np.cumsum(evr)
-    k90 = int(np.searchsorted(cum, 0.90) + 1)  # nº de comps p/ >=90%
-    print(f"Acumulada (PC1..PC{k}): {cum[k-1]*100:.2f}%")
-    print(f"Sugestão: usar {k90} componentes para >=90% de variância explicada (se disponível).")
+    if verbose:
+        print(f"\nInstante escolhido: {instant_index}")
+        if feature_names is not None:
+            top_features_names = feature_names[:min(10, len(feature_names))]
+            print("Exemplo (primeiras features) — valor original vs reconstruído (aprox.):")
+            for i, name in enumerate(top_features_names):
+                print(f"  {name:30s} | orig = {original_instant[i]: .4f}  | recon = {approx_original[i]: .4f}")
+        print(f"\nMSE de reconstrução para o instante {instant_index}: {mse:.6g}")
+        print(f"Tamanho da compressão: {K} componentes (de {features.shape[1]} features)")
 
-    if show_plots:
-        try:
-            # Scree plot
-            plt.figure(figsize=(6, 4))
-            plt.plot(np.arange(1, m+1), evr*100, marker='o')
-            plt.xlabel("Componente Principal")
-            plt.ylabel("Variância explicada (%)")
-            plt.title("PCA — Scree plot")
-            plt.tight_layout()
-            plt.show()
+    results = {
+        "z_features": z_features,
+        "pca_model": pca,
+        "explained_ratio": explained_ratio,
+        "cumulative_explained": cumulative,
+        "num_components_for_threshold": num_components_for_threshold,
+        "compressed_instant": compressed_instant,
+        "approx_original_instant": approx_original,
+        "original_instant": original_instant,
+        "reconstruction_mse": mse,
+        "K": K
+    }
 
-            # Scatter PC1 vs PC2
-            if Z.shape[1] >= 2:
-                plt.figure(figsize=(6, 5))
-                if y is None:
-                    plt.scatter(Z[:, 0], Z[:, 1], s=10, alpha=0.7)
-                else:
-                    labs = np.unique(y.astype(int))
-                    for lab in labs:
-                        mask = (y == lab)
-                        plt.scatter(Z[mask, 0], Z[mask, 1], s=12, alpha=0.7, label=f"Atv {lab:02d}")
-                    plt.legend(markerscale=1.5, fontsize=8, ncol=2)
-                plt.xlabel("PC1")
-                plt.ylabel("PC2")
-                plt.title("PCA — PC1 vs PC2")
-                plt.tight_layout()
-                plt.show()
-        except Exception as e:
-            print(f"(Aviso) Não foi possível desenhar os gráficos: {e}")
+    return results
 
-    return Z, W, evr, mu
+# --- Exercise 4.5: Fisher Scores and ReliefF ---
 
+from skfeature.function.similarity_based import fisher_score
+from skrebate import ReliefF
+import numpy as np
+import matplotlib.pyplot as plt
 
-    print(f"4.2: janelas válidas = {kept} | descartadas (multi-label ou vazias) = {discarded}")
-    print(f"4.2: X shape = {X.shape} | nº features = {X.shape[1]}")
-    return X, y, feat_names
+def fisher_and_relief(feature_matrix, labels, feature_names=None, top_features=10, n_neighbors=100, show_plot=True):
 
+    # Fisher Score
+    scores_fisher = fisher_score.fisher_score(feature_matrix, labels)
+    sorted_idx_fisher = np.argsort(scores_fisher)[::-1]
+    sorted_scores_fisher = scores_fisher[sorted_idx_fisher]
 
+    print("\n========== Fisher Score ==========")
+    for i in range(min(top_features, len(sorted_idx_fisher))):
+        idx = sorted_idx_fisher[i]
+        name = feature_names[idx] if feature_names is not None and idx < len(feature_names) else f"feature_{idx}"
+        print(f"{i+1:02d}. {name:>20s}  |  score = {sorted_scores_fisher[i]:.4f}")
 
-# --- Exercise 4.4: Fisher Scores (ranking de features) ---
+    # ReliefF
+    relief = ReliefF(n_neighbors=n_neighbors)
+    relief.fit(feature_matrix, labels)
+    scores_relief = relief.feature_importances_
+    sorted_idx_relief = np.argsort(scores_relief)[::-1]
+    sorted_scores_relief = scores_relief[sorted_idx_relief]
 
-def _fisher_scores(X, y):
-    """
-    Calcula Fisher Score para cada coluna de X.
-    X: (n_amostras x n_features), y: labels inteiros (atividades)
-    Retorna: scores (1D), onde scores[j] é o Fisher da feature j.
-    """
-    X = X.astype(float, copy=False)
-    y = y.astype(int, copy=False)
-    n, d = X.shape
+    print("\n========== ReliefF ==========")
+    for i in range(min(top_features, len(sorted_idx_relief))):
+        idx = sorted_idx_relief[i]
+        name = feature_names[idx] if feature_names is not None and idx < len(feature_names) else f"feature_{idx}"
+        print(f"{i+1:02d}. {name:>20s}  |  score = {sorted_scores_relief[i]:.4f}")
 
-    # médias globais por feature
-    mu = np.mean(X, axis=0)  # (d,)
+    if show_plot:
+        plt.figure(figsize=(10, 4))
+        plt.subplot(1, 2, 1)
+        plt.bar(range(top_features), sorted_scores_fisher[:top_features])
+        plt.xticks(range(top_features),
+                   [feature_names[i] if feature_names else f"f{i}" for i in sorted_idx_fisher[:top_features]],
+                   rotation=45, ha='right')
+        plt.ylabel("Fisher Score")
+        plt.title("Top Features — Fisher Score")
 
-    classes = np.unique(y)
-    # Acumuladores
-    num = np.zeros(d, dtype=float)  # between-class (numerador)
-    den = np.zeros(d, dtype=float)  # within-class (denominador)
+        plt.subplot(1, 2, 2)
+        plt.bar(range(top_features), sorted_scores_relief[:top_features])
+        plt.xticks(range(top_features),
+                   [feature_names[i] if feature_names else f"f{i}" for i in sorted_idx_relief[:top_features]],
+                   rotation=45, ha='right')
+        plt.ylabel("ReliefF Score")
+        plt.title("Top Features — ReliefF")
 
-    for c in classes:
-        mask = (y == c)
-        Xc = X[mask]
-        if Xc.shape[0] == 0:
-            continue
-        nc = Xc.shape[0]
-        muc = np.mean(Xc, axis=0)            # (d,)
-        varc = np.var(Xc, axis=0, ddof=1)    # (d,)
-        # soma ponderada
-        num += nc * (muc - mu) ** 2
-        den += nc * varc
-
-    # evitar divisão por zero
-    den = np.where(den <= 1e-12, 1e-12, den)
-    scores = num / den
-    return scores
-
-def run_44_fisher_scores(X, y, feature_names=None, top=10, show_plot=True):
-    """
-    4.4 — Calcula e lista as Top-k features por Fisher Score.
-    - X, y: do 4.2 (idealmente já normalizado a z-score)
-    - feature_names: lista de nomes (opcional, mas recomendado)
-    - top: quantas features mostrar
-    - show_plot: desenha gráfico de barras das Top-k
-    Retorna: idx_sorted (índices das features por ordem desc), scores_sorted
-    """
-    if X.size == 0 or y.size == 0:
-        raise ValueError("4.4: X/y vazios.")
-
-    scores = _fisher_scores(X, y)                # (d,)
-    idx_sorted = np.argsort(scores)[::-1]        # descrescente
-    scores_sorted = scores[idx_sorted]
-
-    k = min(top, len(idx_sorted))
-    print("\n--- Exercício 4.4: Fisher Scores (ranking de features) ---")
-    print(f"Top {k} features por Fisher Score:")
-    for i in range(k):
-        j = idx_sorted[i]
-        nome = feature_names[j] if (feature_names is not None and j < len(feature_names)) else f"feat_{j}"
-        print(f"{i+1:02d}. {nome:>20s}  |  score = {scores_sorted[i]:.4f}")
-
-    if show_plot and k > 0:
-        try:
-            names_plot = [feature_names[j] if (feature_names is not None and j < len(feature_names)) else f"feat_{j}"
-                          for j in idx_sorted[:k]]
-            vals_plot = scores_sorted[:k]
-            plt.figure(figsize=(8, 4))
-            plt.bar(range(k), vals_plot)
-            plt.xticks(range(k), names_plot, rotation=45, ha='right')
-            plt.ylabel("Fisher Score")
-            plt.title(f"Top {k} features por Fisher Score")
-            plt.tight_layout()
-            plt.show()
-        except Exception as e:
-            print(f"(Aviso) Não foi possível desenhar o gráfico: {e}")
-
-    return idx_sorted, scores_sorted
-
-
-
-# --- Exercise 4.5: ReliefF (seleção de features baseada em vizinhança) ---
-
-from sklearn.neighbors import NearestNeighbors
-
-def _relieff_weights(X, y, n_neighbors=10):
-    """
-    Implementação simples do ReliefF.
-    - X: matriz de features (n_amostras x n_features)
-    - y: labels (inteiros)
-    - n_neighbors: nº de vizinhos usados (típico 5-10)
-    Retorna: vetor de pesos (importância de cada feature)
-    """
-    X = np.array(X, dtype=float)
-    y = np.array(y, dtype=int)
-    n, d = X.shape
-    weights = np.zeros(d)
-
-    # Distâncias normalizadas (cada feature em [0,1])
-    X_min = np.nanmin(X, axis=0)
-    X_max = np.nanmax(X, axis=0)
-    denom = np.where(X_max - X_min == 0, 1, X_max - X_min)
-    Xn = (X - X_min) / denom
-
-    # Usar k-vizinhos mais próximos (distância Euclidiana)
-    knn = NearestNeighbors(n_neighbors=n_neighbors + 1)
-    knn.fit(Xn)
-
-    for i in range(n):
-        xi = Xn[i]
-        yi = y[i]
-        distances, indices = knn.kneighbors([xi], return_distance=True)
-        indices = indices[0][1:]  # ignora o próprio ponto
-
-        # hits = da mesma classe
-        hits = [j for j in indices if y[j] == yi]
-        # misses = de outras classes
-        misses = [j for j in indices if y[j] != yi]
-
-        # se não houver hits/misses suficientes, ignora
-        if len(hits) == 0 or len(misses) == 0:
-            continue
-
-        for f in range(d):
-            # média da diferença absoluta
-            diff_hit = np.mean(np.abs(Xn[i, f] - Xn[hits, f]))
-            diff_miss = np.mean(np.abs(Xn[i, f] - Xn[misses, f]))
-            weights[f] += diff_miss - diff_hit
-
-    # normalizar pesos para [0,1]
-    w_min, w_max = np.min(weights), np.max(weights)
-    if w_max - w_min > 1e-12:
-        weights = (weights - w_min) / (w_max - w_min)
-    else:
-        weights[:] = 0.0
-    return weights
-
-
-def run_45_relieff(X, y, feature_names=None, top=10, n_neighbors=10, show_plot=True):
-    """
-    4.5 — Calcula pesos ReliefF e mostra as Top-k features mais relevantes.
-    - X, y: dados do 4.2 (idealmente normalizados)
-    - feature_names: nomes das features (opcional)
-    - top: nº de features a mostrar
-    - n_neighbors: nº de vizinhos (típico 5-10)
-    """
-    print("\n--- Exercício 4.5: ReliefF ---")
-    if X.size == 0 or y.size == 0:
-        raise ValueError("4.5: X/y vazios.")
-
-    weights = _relieff_weights(X, y, n_neighbors=n_neighbors)
-    idx_sorted = np.argsort(weights)[::-1]
-    scores_sorted = weights[idx_sorted]
-
-    k = min(top, len(idx_sorted))
-    print(f"Top {k} features por peso ReliefF:")
-    for i in range(k):
-        j = idx_sorted[i]
-        nome = feature_names[j] if (feature_names is not None and j < len(feature_names)) else f"feat_{j}"
-        print(f"{i+1:02d}. {nome:>20s}  |  peso = {scores_sorted[i]:.4f}")
-
-    if show_plot and k > 0:
-        try:
-            names_plot = [feature_names[j] if (feature_names is not None and j < len(feature_names)) else f"feat_{j}"
-                          for j in idx_sorted[:k]]
-            vals_plot = scores_sorted[:k]
-            plt.figure(figsize=(8, 4))
-            plt.bar(range(k), vals_plot, color='skyblue')
-            plt.xticks(range(k), names_plot, rotation=45, ha='right')
-            plt.ylabel("Peso ReliefF (importância)")
-            plt.title(f"Top {k} features por ReliefF (k={n_neighbors})")
-            plt.tight_layout()
-            plt.show()
-        except Exception as e:
-            print(f"(Aviso) Não foi possível desenhar o gráfico: {e}")
-
-    return idx_sorted, scores_sorted
+        plt.tight_layout()
+        plt.show()
+    
+    return {"fisher": {"scores": scores_fisher, "ranking": sorted_idx_fisher}, "relief": {"scores": scores_relief, "ranking": sorted_idx_relief}}
