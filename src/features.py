@@ -259,24 +259,34 @@ def pca_analysis(features, feature_names=None, variance_threshold=0.75, instant_
 # --- Exercise 4.5: Fisher Scores and ReliefF ---
 
 def fisher(feature_matrix, labels, feature_names=None, top_features=10):
+
     labels = np.array(labels)
     n_features = feature_matrix.shape[1]
     unique_labels = np.unique(labels)
-    n_classes = len(unique_labels)
 
-    overall_mean = np.mean(feature_matrix, axis=0)
-    numerator = np.zeros(n_features)
-    denominator = np.zeros(n_features)
+    overall_mean = np.nanmean(feature_matrix, axis=0)
+    numerator = np.zeros(n_features, dtype=float)
+    denominator = np.zeros(n_features, dtype=float)
 
     for c in unique_labels:
         class_mask = labels == c
         class_data = feature_matrix[class_mask]
-        n_c = class_data.shape[0]
-        class_mean = np.mean(class_data, axis=0)
-        numerator += n_c * (class_mean - overall_mean) ** 2
-        denominator += np.sum((class_data - class_mean) ** 2, axis=0)
 
-    scores = numerator / (denominator)
+        n_c_feature = np.sum(~np.isnan(class_data), axis=0)
+
+        class_mean = np.nanmean(class_data, axis=0)
+
+        diff = class_mean - overall_mean
+        diff = np.where(np.isnan(diff), 0.0, diff)
+
+        numerator += n_c_feature * (diff ** 2)
+
+        denom_feature = np.nansum((class_data - class_mean) ** 2, axis=0)
+        denominator += denom_feature
+
+    with np.errstate(divide='ignore', invalid='ignore'):
+        scores = np.where(denominator > 0, numerator / denominator, 0.0)
+
     sorted_idxs = np.argsort(scores)[::-1]
     sorted_scores = scores[sorted_idxs]
 
