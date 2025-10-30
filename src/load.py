@@ -23,7 +23,6 @@ def load_data_polars():
     full_data = [load_part_data_polars(i) for i in range(14)]
     return np.concatenate([d for d in full_data if d.size > 0], axis=0)
 
-
 def load_part_data_csv(part_number):
 
     data = []

@@ -62,7 +62,7 @@ def outlier_density(data, var_modules):
     activities_number = np.arange(1, 17)
     densities = np.zeros(16) 
 
-    print("\n--- Outlier Densities by Activity (Right Wrist Sensor only): ---")
+    print("\n--- Outlier Densities by Activity (Right Wrist Sensor only): ---\n")
     for idx, act in enumerate(activities_number):
         activity_mask = activities == act
         act_modules = var_modules_right[activity_mask]
@@ -114,46 +114,59 @@ def kmeans(var_modules, n_clusters):
 
     return labels, centers
 
-def plot_clusters_activity_outliers(data, acc_modules, gyro_modules, mag_modules,
-                                    activity_choice, acc_outlier_idxs, gyro_outlier_idxs, mag_outlier_idxs):
-    """
-    Plota clusters 3D e destaca apenas os outliers de uma atividade específica.
-    
-    - acc_modules, gyro_modules, mag_modules: arrays dos módulos de todos os samples
-    - activity_choice: índice da atividade a destacar (1-16)
-    - *_outlier_idxs: índices relativos apenas à atividade escolhida
-    """
+def plot_clusters(data, activity_choice, device_choice, acc_modules, gyro_modules, mag_modules, n_clusters=3):
 
-    # Seleciona índices de todos os samples da atividade escolhida
+    device_mask = data[:, 0] == device_choice
     activity_mask = data[:, 11] == activity_choice
-    activity_idxs = np.where(activity_mask)[0]
+    combined_mask = device_mask & activity_mask
+    activity_idxs = np.where(combined_mask)[0]
 
-    # Combina outliers de todos os módulos
-    combined_outliers = np.unique(np.concatenate([acc_outlier_idxs, gyro_outlier_idxs, mag_outlier_idxs]))
+    filtered_data_3d = np.column_stack([acc_modules, gyro_modules, mag_modules])[activity_idxs]
 
-    # Dados 3D completos
-    data_3d = np.column_stack([acc_modules, gyro_modules, mag_modules])
+    outlier_mask = np.zeros(len(filtered_data_3d), dtype=bool)
+
+    for i in range(3):  
+        var_data = filtered_data_3d[:, i]
+        q1, q3 = np.percentile(var_data, [25, 75])
+        iqr = q3 - q1
+        lower = q1 - 1.5 * iqr
+        upper = q3 + 1.5 * iqr
+        outlier_mask |= (var_data < lower) | (var_data > upper)
+
+    kmeans = KMeans(n_clusters=n_clusters, random_state=42)
+    kmeans.fit(filtered_data_3d)
+    cluster_labels = kmeans.labels_
 
     fig = plt.figure(figsize=(10, 7))
     ax = fig.add_subplot(111, projection='3d')
 
-    # Pontos normais (todos exceto outliers da atividade escolhida)
-    mask_normal = np.ones(len(data_3d), dtype=bool)
-    mask_normal[activity_idxs[combined_outliers]] = False
-    ax.scatter(data_3d[mask_normal, 0], data_3d[mask_normal, 1], data_3d[mask_normal, 2],
-               s=50, alpha=0.5, label='Normal')
+    unique_clusters = np.unique(cluster_labels)
+    colors = plt.cm.get_cmap('tab10', len(unique_clusters))
 
-    # Pontos outliers da atividade escolhida
-    ax.scatter(data_3d[activity_idxs[combined_outliers], 0],
-               data_3d[activity_idxs[combined_outliers], 1],
-               data_3d[activity_idxs[combined_outliers], 2],
-               color='red', s=100, marker='X', label='Outlier da atividade')
+    for i, cluster in enumerate(unique_clusters):
+        cluster_mask = cluster_labels == cluster
+        cluster_mask[outlier_mask] = False 
+        ax.scatter(
+            filtered_data_3d[cluster_mask, 0],
+            filtered_data_3d[cluster_mask, 1],
+            filtered_data_3d[cluster_mask, 2],
+            s=50, alpha=0.6, color=colors(i),
+            label=f'Cluster {cluster}'
+        )
+
+    ax.scatter(
+        filtered_data_3d[outlier_mask, 0],
+        filtered_data_3d[outlier_mask, 1],
+        filtered_data_3d[outlier_mask, 2],
+        color='red', s=50, marker='o', label='Outlier'
+    )
 
     ax.set_xlabel('|Acceleration|')
     ax.set_ylabel('|Angular Velocity|')
     ax.set_zlabel('|Magnetic Field|')
-    plt.title(f'Clusters com outliers da atividade {activity_choice}')
+    plt.title(f'KMeans clusters with outliers - Activity {activity_choice} - Device {device_choice}')
     ax.legend()
     plt.show()
+
 
 

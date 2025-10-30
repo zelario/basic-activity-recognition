@@ -1,11 +1,9 @@
 import numpy as np
 from numpy.lib.stride_tricks import sliding_window_view
 import matplotlib.pyplot as plt
-from scipy.stats import f_oneway, kruskal, kstest
+from scipy.stats import kruskal, kstest
 from sklearn.decomposition import PCA
-from skfeature.function.similarity_based import fisher_score
 from sklearn.metrics import mean_squared_error
-from skrebate import ReliefF
 
 # --- Exercise 4.1: Statistical Tests ---
 
@@ -25,35 +23,39 @@ def choose_and_test_method(data, modules, alpha=0.05):
                        for activity in range(1, 17)
                        if np.sum(data[:, 11] == activity) > 1]
 
-    use_anova = percentage_normal >= 80.0 and len(activity_groups) >= 2
 
-    if use_anova:
-        stat, p_value = f_oneway(*activity_groups)
-        method = "ANOVA"
-    else:
-        stat, p_value = kruskal(*activity_groups)
-        method = "Kruskal-Wallis"
+    stat, p_value = kruskal(*activity_groups)
 
-    return method, stat, p_value, percentage_normal
+    return stat, p_value, percentage_normal
 
 # --- Exercise 4.2: Feature Extraction ---
 
-def sliding_windows(labels, fs, window_duration=5.0, overlap=0.5):
-    labels = np.asarray(labels)
-    window_size = int(round(window_duration * fs))
+def sliding_windows(data, fs, window_duration=5.0, overlap=0.5):
+    labels = np.asarray(data[:, 11]).astype(int)      
+    device_ids = np.asarray(data[:, 0]).astype(int)   
 
+    window_size = int(round(window_duration * fs))
     step = max(1, int(round(window_size * (1.0 - overlap))))
 
-    windows = sliding_window_view(labels, window_shape=window_size)
+    label_windows = sliding_window_view(labels, window_shape=window_size)
+    device_windows = sliding_window_view(device_ids, window_shape=window_size)
 
-    starts = np.arange(0, windows.shape[0], step)
-    candidate_windows = windows[starts]
+    starts = np.arange(0, label_windows.shape[0], step)
+    label_candidates = label_windows[starts]
+    device_candidates = device_windows[starts]
 
-    mask = np.all(candidate_windows == candidate_windows[:, :1], axis=1)
-    valid_starts = starts[mask]
+    mask_activity = np.all(label_candidates == label_candidates[:, :1], axis=1)
+    mask_device = np.all(device_candidates == device_candidates[:, :1], axis=1)
+    valid_mask = mask_activity & mask_device
 
-    out = [(int(s), int(s + window_size), int(labels[s])) for s in valid_starts]
-    return out
+    valid_starts = starts[valid_mask]
+
+    windows = [
+        (int(s), int(s + window_size), int(labels[s]), int(device_ids[s]))
+        for s in valid_starts
+    ]
+
+    return windows
 
 def extract_window_features(signal):
 
@@ -113,160 +115,131 @@ def zscore_normalization(features, eps=1e-12):
 
 
 def extract_features(data, acceleration_modules, magnetic_modules, gyroscope_modules,
-                                     fs, window_duration=5.0, overlap_ratio=0.5, normalize_zscore=True):
-    
+                     fs, window_duration=5.0, overlap_ratio=0.5):
+
     base_feature_names = [
-        "mean", "std", "median", "variance", "rms", "average_deviation", "skewness", "kurtosis", "iqr",
-        "zero_crossing_rate", "mean_crossing_rate", "spectral_entropy"
+        "mean", "std", "median", "variance", "rms", "average_deviation",
+        "skewness", "kurtosis", "iqr", "zero_crossing_rate", "mean_crossing_rate", "spectral_entropy"
     ]
 
     feature_names = [f"acc_{name}" for name in base_feature_names] + \
                     [f"gyro_{name}" for name in base_feature_names] + \
                     [f"mag_{name}" for name in base_feature_names]
 
-    activity_labels = data[:, 11].astype(int)
-    windows = sliding_windows(activity_labels, fs, window_duration, overlap_ratio)
+    windows = sliding_windows(data, fs, window_duration, overlap_ratio)
 
     features = []
     labels = []
-
+    devices = []
     valid_windows, discarded_windows = 0, 0
-    for (start_idx, end_idx, activity_label) in windows:
-        acceleration_window = acceleration_modules[start_idx:end_idx]
-        gyroscope_window = gyroscope_modules[start_idx:end_idx]
-        magnetic_window = magnetic_modules[start_idx:end_idx]
 
-        if acceleration_window.size == 0 or gyroscope_window.size == 0 or magnetic_window.size == 0:
+    for (start_idx, end_idx, activity_label, device_id) in windows:
+        acc_window = acceleration_modules[start_idx:end_idx]
+        gyro_window = gyroscope_modules[start_idx:end_idx]
+        mag_window = magnetic_modules[start_idx:end_idx]
+
+        if acc_window.size == 0 or gyro_window.size == 0 or mag_window.size == 0:
             discarded_windows += 1
             continue
 
-        acc_features = extract_window_features(acceleration_window)
-        gyro_features = extract_window_features(gyroscope_window)
-        mag_features = extract_window_features(magnetic_window)
+        acc_features = extract_window_features(acc_window)
+        gyro_features = extract_window_features(gyro_window)
+        mag_features = extract_window_features(mag_window)
 
         combined_features = acc_features + gyro_features + mag_features
         features.append(combined_features)
         labels.append(activity_label)
+        devices.append(device_id)
         valid_windows += 1
-
-    if len(features) == 0:
-        print("Nenhuma janela válida encontrada.")
-        return np.empty((0, len(feature_names))), np.array([]), feature_names
 
     features = np.array(features, dtype=float)
     labels = np.array(labels, dtype=int)
+    devices = np.array(devices, dtype=int)
 
-    if normalize_zscore:
-        features = zscore_normalization(features)
+    features = zscore_normalization(features)
 
     return features, labels, feature_names
 
 # --- Exercise 4.3: PCA ---
 
-def pca(features, labels=None, n_components=2):
+def pca(features, labels=None):
 
+    n_components = 2
     pca = PCA(n_components=n_components)
 
     projected_data = pca.fit_transform(features)
 
     explained_variance_ratio = pca.explained_variance_ratio_
     
-    print("\n--- PCA (scikit-learn) ---")
+    print("\n--- PCA ---\n")
     for i, var in enumerate(explained_variance_ratio):
-        print(f"PC{i+1}: {var*100:.2f}% da variância explicada")
-    
-    cumulative_variance = np.cumsum(explained_variance_ratio)
-    num_for_90 = np.searchsorted(cumulative_variance, 0.90) + 1
-    print(f"Número de componentes para >=90% de variância: {num_for_90}")
+        print(f"PC{i+1}: {var*100:.2f}%")
 
-    plt.figure(figsize=(6, 4))
-    plt.plot(np.arange(1, n_components+1), explained_variance_ratio*100, marker='o')
-    plt.xlabel("Componente Principal")
-    plt.ylabel("Variância Explicada (%)")
-    plt.title("PCA — Scree Plot")
+    plt.figure(figsize=(6, 5))
+    if labels is None:
+        plt.scatter(projected_data[:, 0], projected_data[:, 1], s=10, alpha=0.7)
+    else:
+        unique_labels = np.unique(labels)
+        for label in unique_labels:
+            mask = labels == label
+            plt.scatter(projected_data[mask, 0], projected_data[mask, 1], s=12, alpha=0.7,
+                        label=f"Activity {label}")
+        plt.legend(markerscale=1.5, fontsize=8, ncol=2)
+    plt.xlabel("PC1")
+    plt.ylabel("PC2")
+    plt.title("PCA — PC1 vs PC2")
     plt.tight_layout()
     plt.show()
-    
-    if projected_data.shape[1] >= 2:
-        plt.figure(figsize=(6, 5))
-        if labels is None:
-            plt.scatter(projected_data[:, 0], projected_data[:, 1], s=10, alpha=0.7)
-        else:
-            unique_labels = np.unique(labels)
-            for label in unique_labels:
-                mask = labels == label
-                plt.scatter(projected_data[mask, 0], projected_data[mask, 1], s=12, alpha=0.7,
-                            label=f"Atividade {label}")
-            plt.legend(markerscale=1.5, fontsize=8, ncol=2)
-        plt.xlabel("PC1")
-        plt.ylabel("PC2")
-        plt.title("PCA — PC1 vs PC2")
-        plt.tight_layout()
-        plt.show()
     
     return projected_data, pca.components_, explained_variance_ratio
 
 # --- Exercise 4.4: PCA analysis ---
 
 def pca_analysis(features, feature_names=None, variance_threshold=0.75, instant_index=0, verbose=True):
-    """
-    Performs PCA on already normalized features (z-score done earlier in extract_features).
-
-    1) Computes PCA with all components.
-    2) Determines how many components explain >= variance_threshold (e.g. 75%).
-    3) Returns compressed representation for a chosen instant and reconstruction.
-    4) Prints useful info about explained variance and reconstruction quality.
-    """
 
     if features.size == 0:
-        raise ValueError("Matriz de features vazia.")
+        raise ValueError("Feature matrix is empty.")
 
-    # --- features are already normalized ---
     z_features = features.copy()
 
-    # --- PCA with all possible components ---
     n_components_full = min(z_features.shape)
     pca = PCA(n_components=n_components_full)
     projected = pca.fit_transform(z_features)
     explained_ratio = pca.explained_variance_ratio_
     cumulative = np.cumsum(explained_ratio)
 
-    # --- number of components for threshold ---
     num_components_for_threshold = int(np.searchsorted(cumulative, variance_threshold) + 1)
 
     if verbose:
-        print("\n--- PCA: explicação de variância ---")
+        print("\n--- PCA: explained variance ---\n")
         for i, (er, cum) in enumerate(zip(explained_ratio, cumulative)):
-            print(f"PC{i+1:02d}: {er*100:6.3f}%   |  acumulada: {cum*100:6.3f}%")
-        print(f"\nNúmero de componentes necessárias para >= {variance_threshold*100:.1f}%: {num_components_for_threshold}")
+            print(f"PC{i+1:02d}: {er*100:6.3f}%, Sum: {cum*100:6.3f}%")
+        print(f"\nNumber of components needed for >= {variance_threshold*100:.1f}%: {num_components_for_threshold}")
 
-    # --- extract compressed vector for chosen instant ---
     if instant_index < 0 or instant_index >= z_features.shape[0]:
-        raise IndexError("instant_index fora do intervalo (0 .. n_samples-1).")
+        raise IndexError("instant_index out of range (0 .. n_samples-1).")
 
     K = num_components_for_threshold
     compressed_instant = projected[instant_index, :K]
 
-    # --- reconstruct (in z-score space) ---
     components_K = pca.components_[:K, :]
     scores_K = compressed_instant.reshape(1, -1)
     approx_z = np.dot(scores_K, components_K).reshape(-1)
 
-    # since features are already normalized, reconstruction = approx_z
     approx_original = approx_z
     original_instant = z_features[instant_index, :]
 
     mse = mean_squared_error(original_instant, approx_original)
 
     if verbose:
-        print(f"\nInstante escolhido: {instant_index}")
+        print(f"\nChosen instant: {instant_index}")
         if feature_names is not None:
             top_features_names = feature_names[:min(10, len(feature_names))]
-            print("Exemplo (primeiras features) — valor original vs reconstruído (aprox.):")
+            print("Example (first features) — original value vs reconstructed (approx.):")
             for i, name in enumerate(top_features_names):
                 print(f"  {name:30s} | orig = {original_instant[i]: .4f}  | recon = {approx_original[i]: .4f}")
-        print(f"\nMSE de reconstrução para o instante {instant_index}: {mse:.6g}")
-        print(f"Tamanho da compressão: {K} componentes (de {features.shape[1]} features)")
+        print(f"\nMSE for instant {instant_index}: {mse:.6g}")
+        print(f"Compression size: {K} components (from {features.shape[1]} features)")
 
     results = {
         "z_features": z_features,
@@ -285,56 +258,63 @@ def pca_analysis(features, feature_names=None, variance_threshold=0.75, instant_
 
 # --- Exercise 4.5: Fisher Scores and ReliefF ---
 
-from skfeature.function.similarity_based import fisher_score
-from skrebate import ReliefF
-import numpy as np
-import matplotlib.pyplot as plt
+def fisher(feature_matrix, labels, feature_names=None, top_features=10):
+    labels = np.array(labels)
+    n_features = feature_matrix.shape[1]
+    unique_labels = np.unique(labels)
+    n_classes = len(unique_labels)
 
-def fisher_and_relief(feature_matrix, labels, feature_names=None, top_features=10, n_neighbors=100, show_plot=True):
+    overall_mean = np.mean(feature_matrix, axis=0)
+    numerator = np.zeros(n_features)
+    denominator = np.zeros(n_features)
 
-    # Fisher Score
-    scores_fisher = fisher_score.fisher_score(feature_matrix, labels)
-    sorted_idx_fisher = np.argsort(scores_fisher)[::-1]
-    sorted_scores_fisher = scores_fisher[sorted_idx_fisher]
+    for c in unique_labels:
+        class_mask = labels == c
+        class_data = feature_matrix[class_mask]
+        n_c = class_data.shape[0]
+        class_mean = np.mean(class_data, axis=0)
+        numerator += n_c * (class_mean - overall_mean) ** 2
+        denominator += np.sum((class_data - class_mean) ** 2, axis=0)
 
-    print("\n========== Fisher Score ==========")
-    for i in range(min(top_features, len(sorted_idx_fisher))):
-        idx = sorted_idx_fisher[i]
-        name = feature_names[idx] if feature_names is not None and idx < len(feature_names) else f"feature_{idx}"
-        print(f"{i+1:02d}. {name:>20s}  |  score = {sorted_scores_fisher[i]:.4f}")
+    scores = numerator / (denominator)
+    sorted_idxs = np.argsort(scores)[::-1]
+    sorted_scores = scores[sorted_idxs]
 
-    # ReliefF
-    relief = ReliefF(n_neighbors=n_neighbors)
-    relief.fit(feature_matrix, labels)
-    scores_relief = relief.feature_importances_
-    sorted_idx_relief = np.argsort(scores_relief)[::-1]
-    sorted_scores_relief = scores_relief[sorted_idx_relief]
+    print("\n========== Fisher Score ==========\n")
+    for i in range(min(top_features, n_features)):
+        idx = sorted_idxs[i]
+        name = feature_names[idx] if feature_names is not None else f"feature_{idx}"
+        print(f"{i+1:02d}. {name:>20s}  |  score = {sorted_scores[i]:.4f}")
 
-    print("\n========== ReliefF ==========")
-    for i in range(min(top_features, len(sorted_idx_relief))):
-        idx = sorted_idx_relief[i]
-        name = feature_names[idx] if feature_names is not None and idx < len(feature_names) else f"feature_{idx}"
-        print(f"{i+1:02d}. {name:>20s}  |  score = {sorted_scores_relief[i]:.4f}")
+def relief(feature_matrix, labels, feature_names=None, top_features=10, n_neighbors=50, n_samples=500):
+    n_samples_total = feature_matrix.shape[0]
+    n_features = feature_matrix.shape[1]
 
-    if show_plot:
-        plt.figure(figsize=(10, 4))
-        plt.subplot(1, 2, 1)
-        plt.bar(range(top_features), sorted_scores_fisher[:top_features])
-        plt.xticks(range(top_features),
-                   [feature_names[i] if feature_names else f"f{i}" for i in sorted_idx_fisher[:top_features]],
-                   rotation=45, ha='right')
-        plt.ylabel("Fisher Score")
-        plt.title("Top Features — Fisher Score")
+    sample_indices = np.random.choice(n_samples_total, min(n_samples, n_samples_total), replace=False)
+    X_sample = feature_matrix[sample_indices]
+    y_sample = labels[sample_indices]
 
-        plt.subplot(1, 2, 2)
-        plt.bar(range(top_features), sorted_scores_relief[:top_features])
-        plt.xticks(range(top_features),
-                   [feature_names[i] if feature_names else f"f{i}" for i in sorted_idx_relief[:top_features]],
-                   rotation=45, ha='right')
-        plt.ylabel("ReliefF Score")
-        plt.title("Top Features — ReliefF")
+    scores = np.zeros(n_features)
 
-        plt.tight_layout()
-        plt.show()
-    
-    return {"fisher": {"scores": scores_fisher, "ranking": sorted_idx_fisher}, "relief": {"scores": scores_relief, "ranking": sorted_idx_relief}}
+    for i, x_i in enumerate(X_sample):
+        same_class_mask = y_sample == y_sample[i]
+        diff_class_mask = y_sample != y_sample[i]
+
+        same_class_idx = np.random.choice(np.where(same_class_mask)[0], min(n_neighbors, sum(same_class_mask)), replace=True)
+        diff_class_idx = np.random.choice(np.where(diff_class_mask)[0], min(n_neighbors, sum(diff_class_mask)), replace=True)
+
+        hit_diff = np.mean(np.abs(X_sample[same_class_idx] - x_i), axis=0)
+        miss_diff = np.mean(np.abs(X_sample[diff_class_idx] - x_i), axis=0)
+
+        scores += miss_diff - hit_diff
+
+    scores /= n_samples
+
+    sorted_idxs = np.argsort(scores)[::-1]
+    sorted_scores = scores[sorted_idxs]
+
+    print("\n========== ReliefF ==========\n")
+    for i in range(min(top_features, n_features)):
+        idx = sorted_idxs[i]
+        name = feature_names[idx] if feature_names is not None else f"feature_{idx}"
+        print(f"{i+1:02d}. {name:>20s}  |  score = {sorted_scores[i]:.4f}")
