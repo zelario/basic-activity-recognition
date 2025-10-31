@@ -92,11 +92,12 @@ if __name__ == "__main__":
 
     # Exercicio 4.3
 
-    projected_data, components, explained_variance = pca(features, labels)
+    n_components = 36
+    pca_results = pca(features, n_components)
 
     # Exercicio 4.4
 
-    analysis = pca_analysis(features, feature_names, variance_threshold=0.75, instant_index=5)
+    pca_analysis(pca_results)
 
     # Exercicio 4.5
 

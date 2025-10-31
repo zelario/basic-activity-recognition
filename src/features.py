@@ -162,99 +162,42 @@ def extract_features(data, acceleration_modules, magnetic_modules, gyroscope_mod
 
 # --- Exercise 4.3: PCA ---
 
-def pca(features, labels=None):
+def pca(features, n_components=None):
 
-    n_components = 2
+    n_components = n_components or min(features.shape)
+
     pca = PCA(n_components=n_components)
-
     projected_data = pca.fit_transform(features)
 
     explained_variance_ratio = pca.explained_variance_ratio_
-    
-    print("\n--- PCA ---\n")
-    for i, var in enumerate(explained_variance_ratio):
-        print(f"PC{i+1}: {var*100:.2f}%")
 
-    plt.figure(figsize=(6, 5))
-    if labels is None:
-        plt.scatter(projected_data[:, 0], projected_data[:, 1], s=10, alpha=0.7)
-    else:
-        unique_labels = np.unique(labels)
-        for label in unique_labels:
-            mask = labels == label
-            plt.scatter(projected_data[mask, 0], projected_data[mask, 1], s=12, alpha=0.7,
-                        label=f"Activity {label}")
-        plt.legend(markerscale=1.5, fontsize=8, ncol=2)
-    plt.xlabel("PC1")
-    plt.ylabel("PC2")
-    plt.title("PCA — PC1 vs PC2")
-    plt.tight_layout()
-    plt.show()
-    
-    return projected_data, pca.components_, explained_variance_ratio
-
-# --- Exercise 4.4: PCA analysis ---
-
-def pca_analysis(features, feature_names=None, variance_threshold=0.75, instant_index=0, verbose=True):
-
-    if features.size == 0:
-        raise ValueError("Feature matrix is empty.")
-
-    z_features = features.copy()
-
-    n_components_full = min(z_features.shape)
-    pca = PCA(n_components=n_components_full)
-    projected = pca.fit_transform(z_features)
-    explained_ratio = pca.explained_variance_ratio_
-    cumulative = np.cumsum(explained_ratio)
-
-    num_components_for_threshold = int(np.searchsorted(cumulative, variance_threshold) + 1)
-
-    if verbose:
-        print("\n--- PCA: explained variance ---\n")
-        for i, (er, cum) in enumerate(zip(explained_ratio, cumulative)):
-            print(f"PC{i+1:02d}: {er*100:6.3f}%, Sum: {cum*100:6.3f}%")
-        print(f"\nNumber of components needed for >= {variance_threshold*100:.1f}%: {num_components_for_threshold}")
-
-    if instant_index < 0 or instant_index >= z_features.shape[0]:
-        raise IndexError("instant_index out of range (0 .. n_samples-1).")
-
-    K = num_components_for_threshold
-    compressed_instant = projected[instant_index, :K]
-
-    components_K = pca.components_[:K, :]
-    scores_K = compressed_instant.reshape(1, -1)
-    approx_z = np.dot(scores_K, components_K).reshape(-1)
-
-    approx_original = approx_z
-    original_instant = z_features[instant_index, :]
-
-    mse = mean_squared_error(original_instant, approx_original)
-
-    if verbose:
-        print(f"\nChosen instant: {instant_index}")
-        if feature_names is not None:
-            top_features_names = feature_names[:min(10, len(feature_names))]
-            print("Example (first features) — original value vs reconstructed (approx.):")
-            for i, name in enumerate(top_features_names):
-                print(f"  {name:30s} | orig = {original_instant[i]: .4f}  | recon = {approx_original[i]: .4f}")
-        print(f"\nMSE for instant {instant_index}: {mse:.6g}")
-        print(f"Compression size: {K} components (from {features.shape[1]} features)")
-
-    results = {
-        "z_features": z_features,
+    return {
+        "projected_data": projected_data,
+        "components": pca.components_,
+        "explained_variance_ratio": explained_variance_ratio,
         "pca_model": pca,
-        "explained_ratio": explained_ratio,
-        "cumulative_explained": cumulative,
-        "num_components_for_threshold": num_components_for_threshold,
-        "compressed_instant": compressed_instant,
-        "approx_original_instant": approx_original,
-        "original_instant": original_instant,
-        "reconstruction_mse": mse,
-        "K": K
+        "features": features
     }
 
-    return results
+
+# --- Exercise 4.4: PCA analysis  ---
+
+def pca_analysis(pca_results):
+    explained_ratio = pca_results["explained_variance_ratio"]
+    cumulative = np.cumsum(explained_ratio)
+
+    plt.figure(figsize=(8, 5))
+    plt.bar(range(1, len(explained_ratio) + 1), explained_ratio,
+            alpha=0.6, label="Variância explicada")
+    plt.plot(range(1, len(cumulative) + 1), cumulative,
+             color='red', marker='o', label="Variância acumulada")
+
+    plt.title("PCA — Variância explicada por componente")
+    plt.xlabel("Número de componentes principais")
+    plt.ylabel("Proporção da variância explicada")
+    plt.legend()
+    plt.tight_layout()
+    plt.show()
 
 # --- Exercise 4.5: Fisher Scores and ReliefF ---
 
