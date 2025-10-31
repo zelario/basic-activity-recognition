@@ -3,11 +3,10 @@ from numpy.lib.stride_tricks import sliding_window_view
 import matplotlib.pyplot as plt
 from scipy.stats import kruskal, kstest
 from sklearn.decomposition import PCA
-from sklearn.metrics import mean_squared_error
 
 # --- Exercise 4.1: Statistical Tests ---
 
-def choose_and_test_method(data, modules, alpha=0.05):
+def normality_test(data, modules, alpha=0.05):
     normality_results = {}
     for activity in range(1, 17):
         activity_modules = modules[data[:, 11] == activity]
@@ -22,7 +21,6 @@ def choose_and_test_method(data, modules, alpha=0.05):
     activity_groups = [modules[data[:, 11] == activity]
                        for activity in range(1, 17)
                        if np.sum(data[:, 11] == activity) > 1]
-
 
     stat, p_value = kruskal(*activity_groups)
 
@@ -179,7 +177,6 @@ def pca(features, n_components=None):
         "features": features
     }
 
-
 # --- Exercise 4.4: PCA analysis  ---
 
 def pca_analysis(pca_results):
@@ -188,86 +185,83 @@ def pca_analysis(pca_results):
 
     plt.figure(figsize=(8, 5))
     plt.bar(range(1, len(explained_ratio) + 1), explained_ratio,
-            alpha=0.6, label="Variância explicada")
+            alpha=0.6, label="Explained Variance Ratio")
     plt.plot(range(1, len(cumulative) + 1), cumulative,
-             color='red', marker='o', label="Variância acumulada")
+             color='red', marker='o', label="Cumulative Variance")
 
-    plt.title("PCA — Variância explicada por componente")
-    plt.xlabel("Número de componentes principais")
-    plt.ylabel("Proporção da variância explicada")
+    plt.axhline(y=0.75, color='green', linestyle='--', label=f"{int(0.75*100)}% Variance")
+
+    n_components = np.argmax(cumulative >= 0.75) + 1
+    plt.axvline(x=n_components, color='purple', linestyle='--', label=f"{n_components} Components")
+
+    plt.title("PCA Analysis")
+    plt.xlabel("Component Number")
+    plt.ylabel("Variance Explained")
     plt.legend()
     plt.tight_layout()
     plt.show()
 
 # --- Exercise 4.5: Fisher Scores and ReliefF ---
 
-def fisher(feature_matrix, labels, feature_names=None, top_features=10):
+def fisher(features, labels, feature_names):
 
     labels = np.array(labels)
-    n_features = feature_matrix.shape[1]
-    unique_labels = np.unique(labels)
+    n_features = features.shape[1]
+    classes = np.unique(labels)
+    overall_mean = np.nanmean(features, axis=0)
 
-    overall_mean = np.nanmean(feature_matrix, axis=0)
-    numerator = np.zeros(n_features, dtype=float)
-    denominator = np.zeros(n_features, dtype=float)
+    nominator = np.zeros(n_features)
+    denominator = np.zeros(n_features)
 
-    for c in unique_labels:
-        class_mask = labels == c
-        class_data = feature_matrix[class_mask]
+    for cls in classes:
+        cls_mask = labels == cls
+        cls_data = features[cls_mask]
+        cls_count = np.sum(~np.isnan(cls_data), axis=0)
+        cls_mean = np.nanmean(cls_data, axis=0)
 
-        n_c_feature = np.sum(~np.isnan(class_data), axis=0)
-
-        class_mean = np.nanmean(class_data, axis=0)
-
-        diff = class_mean - overall_mean
-        diff = np.where(np.isnan(diff), 0.0, diff)
-
-        numerator += n_c_feature * (diff ** 2)
-
-        denom_feature = np.nansum((class_data - class_mean) ** 2, axis=0)
-        denominator += denom_feature
+        diff = np.where(np.isnan(cls_mean - overall_mean), 0, cls_mean - overall_mean)
+        nominator += cls_count * (diff ** 2)
+        denominator += np.nansum((cls_data - cls_mean) ** 2, axis=0)
 
     with np.errstate(divide='ignore', invalid='ignore'):
-        scores = np.where(denominator > 0, numerator / denominator, 0.0)
+        scores = np.where(denominator > 0, nominator / denominator, 0)
 
-    sorted_idxs = np.argsort(scores)[::-1]
-    sorted_scores = scores[sorted_idxs]
+    sorted_idx = np.argsort(scores)[::-1]
+    sorted_scores = scores[sorted_idx]
 
     print("\n========== Fisher Score ==========\n")
-    for i in range(min(top_features, n_features)):
-        idx = sorted_idxs[i]
-        name = feature_names[idx] if feature_names is not None else f"feature_{idx}"
+    for i in range(min(10, n_features)):
+        name = feature_names[sorted_idx[i]] if feature_names else f"feature_{sorted_idx[i]}"
         print(f"{i+1:02d}. {name:>20s}  |  score = {sorted_scores[i]:.4f}")
 
-def relief(feature_matrix, labels, feature_names=None, top_features=10, n_neighbors=50, n_samples=500):
-    n_samples_total = feature_matrix.shape[0]
-    n_features = feature_matrix.shape[1]
 
-    sample_indices = np.random.choice(n_samples_total, min(n_samples, n_samples_total), replace=False)
-    X_sample = feature_matrix[sample_indices]
-    y_sample = labels[sample_indices]
+def relief(features, labels, feature_names, n_neighbors=50, n_samples=500):
 
-    scores = np.zeros(n_features)
+    n_total = features.shape[0]
+    n_features = features.shape[1]
+    sample_idx = np.random.choice(n_total, min(n_samples, n_total), replace=False)
+    X_sample = features[sample_idx]
+    y_sample = labels[sample_idx]
 
-    for i, x_i in enumerate(X_sample):
-        same_class_mask = y_sample == y_sample[i]
-        diff_class_mask = y_sample != y_sample[i]
+    nominator = np.zeros(n_features)
 
-        same_class_idx = np.random.choice(np.where(same_class_mask)[0], min(n_neighbors, sum(same_class_mask)), replace=True)
-        diff_class_idx = np.random.choice(np.where(diff_class_mask)[0], min(n_neighbors, sum(diff_class_mask)), replace=True)
+    for i, x in enumerate(X_sample):
+        same_mask = y_sample == y_sample[i]
+        diff_mask = y_sample != y_sample[i]
 
-        hit_diff = np.mean(np.abs(X_sample[same_class_idx] - x_i), axis=0)
-        miss_diff = np.mean(np.abs(X_sample[diff_class_idx] - x_i), axis=0)
+        same_idx = np.random.choice(np.where(same_mask)[0], min(n_neighbors, np.sum(same_mask)), replace=True)
+        diff_idx = np.random.choice(np.where(diff_mask)[0], min(n_neighbors, np.sum(diff_mask)), replace=True)
 
-        scores += miss_diff - hit_diff
+        hit_diff = np.mean(np.abs(X_sample[same_idx] - x), axis=0)
+        miss_diff = np.mean(np.abs(X_sample[diff_idx] - x), axis=0)
 
-    scores /= n_samples
+        nominator += miss_diff - hit_diff
 
-    sorted_idxs = np.argsort(scores)[::-1]
-    sorted_scores = scores[sorted_idxs]
+    scores = nominator / n_samples
+    sorted_idx = np.argsort(scores)[::-1]
+    sorted_scores = scores[sorted_idx]
 
     print("\n========== ReliefF ==========\n")
-    for i in range(min(top_features, n_features)):
-        idx = sorted_idxs[i]
-        name = feature_names[idx] if feature_names is not None else f"feature_{idx}"
+    for i in range(min(10, n_features)):
+        name = feature_names[sorted_idx[i]] if feature_names else f"feature_{sorted_idx[i]}"
         print(f"{i+1:02d}. {name:>20s}  |  score = {sorted_scores[i]:.4f}")

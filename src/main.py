@@ -1,8 +1,5 @@
-import numpy as np
-import matplotlib as mpl
 from load import *
 from outliers import *
-from mpl_toolkits.mplot3d import Axes3D  
 from features import *
 
 if __name__ == "__main__":
@@ -53,10 +50,6 @@ if __name__ == "__main__":
     plot_zscore_outliers(data, mag_modules, "Magnetic Field", activity_choice, mag_outlier_idxs)
     plot_zscore_outliers(data, gyro_modules, "Angular Velocity", activity_choice, gyro_outlier_idxs)
 
-    #Exercicio 3.5
-
-    ''' blablablabla'''
-
     #Exercicio 3.6 e 3.7
 
     n_clusters = int(input("\n--- K-Means Clustering ---\n\nChoose the number of clusters: (e.g., 2, 3, 4): "))
@@ -70,16 +63,16 @@ if __name__ == "__main__":
     activity_choice = int(input("\nPick an activity to highlight outliers (1-16): "))
     device_choice = int(input("Pick a device to highlight outliers (1-5): "))
 
-    plot_clusters(data, activity_choice, device_choice, 
-                                    acc_modules, gyro_modules, mag_modules, 
-                                    n_clusters=n_clusters)
+    plot_kmeans_clusters(data, activity_choice, device_choice, acc_modules, gyro_modules, mag_modules, n_clusters=n_clusters)
+    
+    plot_dbscan_clusters(data, activity_choice, device_choice, acc_modules, gyro_modules, mag_modules)
 
     #Exercicio 4.1
 
-    print("\n--- Statistical Tests - Kruskal-Wallis ---")
+    print("--- Normality Test - Kruskal-Wallis ---")
     alpha=0.05
     for name, modules in variables_data:
-        stat, p, pct_norm = choose_and_test_method(data, modules, alpha)
+        stat, p, pct_norm = normality_test(data, modules, alpha)
 
         print(f"\n- {name}")
         print(f"Normality (KS): {pct_norm}%  p > {alpha}")
@@ -101,6 +94,6 @@ if __name__ == "__main__":
 
     # Exercicio 4.5
 
-    fisher(features, labels, feature_names, top_features=10)
-    relief(features, labels, feature_names=feature_names, top_features=10, n_neighbors=100)
+    fisher(features, labels, feature_names)
+    relief(features, labels, feature_names=feature_names, n_neighbors=100)
 

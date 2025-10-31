@@ -2,7 +2,6 @@ import numpy as np
 import matplotlib as mpl
 import matplotlib.pyplot as plt
 from sklearn.cluster import KMeans, DBSCAN
-from mpl_toolkits.mplot3d import Axes3D
 
 ACTIVITY_NAMES = [
     "Stand",
@@ -114,7 +113,7 @@ def kmeans(var_modules, n_clusters):
 
     return labels, centers
 
-def plot_clusters(data, activity_choice, device_choice, acc_modules, gyro_modules, mag_modules, n_clusters=3):
+def plot_kmeans_clusters(data, activity_choice, device_choice, acc_modules, gyro_modules, mag_modules, n_clusters=3):
 
     device_mask = data[:, 0] == device_choice
     activity_mask = data[:, 11] == activity_choice
@@ -168,5 +167,36 @@ def plot_clusters(data, activity_choice, device_choice, acc_modules, gyro_module
     ax.legend()
     plt.show()
 
+def plot_dbscan_clusters(data, activity_choice, device_choice, acc_modules, gyro_modules, mag_modules, eps=0.5, min_samples=5):
 
+    mask = (data[:, 0] == device_choice) & (data[:, 11] == activity_choice)
+    X = np.column_stack([acc_modules, gyro_modules, mag_modules])[mask]
 
+    labels = DBSCAN(eps=eps, min_samples=min_samples).fit_predict(X)
+    n_clusters = len(set(labels)) - (1 if -1 in labels else 0)
+    n_outliers = np.sum(labels == -1)
+
+    print(f"\n--- DBSCAN Clustering ---\n")
+    print(f"Estimated number of clusters: {n_clusters}")
+    print(f"Number of outliers: {n_outliers}\n")
+
+    fig = plt.figure(figsize=(10, 7))
+    ax = fig.add_subplot(111, projection='3d')
+    unique_labels = np.unique(labels)
+    colors = plt.cm.tab10(np.arange(len(unique_labels)))
+
+    for i, cluster in enumerate(unique_labels):
+        cluster_mask = labels == cluster
+        color = 'red' if cluster == -1 else colors[i]
+        ax.scatter(
+            X[cluster_mask, 0], X[cluster_mask, 1], X[cluster_mask, 2],
+            s=50, alpha=0.7, color=color,
+            label='Outliers' if cluster == -1 else f'Cluster {cluster}'
+        )
+
+    ax.set_xlabel('|Acceleration|')
+    ax.set_ylabel('|Angular Velocity|')
+    ax.set_zlabel('|Magnetic Field|')
+    ax.set_title(f'DBSCAN Clusters - Activity {activity_choice} - Device {device_choice}')
+    ax.legend()
+    plt.show()
