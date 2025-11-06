@@ -1,0 +1,44 @@
+---------------------------------------------------------
+
+3.5 — Comparação entre 3.1 e 3.4 e densidades de outliers
+
+Na alínea 3.1, o método IQR, representado através dos boxplots, permitiu observar a dispersão dos dados e identificar outliers de forma robusta. Mostrou distribuições concentradas em 
+atividades estáticas e maior variabilidade nas dinâmicas e de transição.
+Na alínea 3.4, o método do Z-score detetou outliers com base no desvio em relação à média, sendo mais sensível a valores extremos e distribuições assimétricas.
+Em comparação, o IQR produz resultados mais consistentes e estáveis, enquanto o Z-score destaca melhor os picos anómalos. O IQR é mais adequado para caracterizar a variabilidade geral, 
+e o Z-score para identificar eventos raros e intensos.
+
+--------------------------------------------
+
+4.1 — Significância estatística e normalidade
+
+O teste de Kolmogorov–Smirnov indicou que as distribuições das variáveis não são normais (p < 0,05). Por isso, aplicou-se o teste de Kruskal–Wallis, adequado para dados não paramétricos. 
+Os resultados (p≈0) mostraram diferenças estatisticamente significativas entre as atividades para todas as variáveis (aceleração, giroscópio e magnetómetro).
+Conclui-se que as médias e medianas das medições variam conforme a atividade, validando que estas variáveis são discriminantes e úteis para distinguir padrões de movimento.
+
+--------------------------------------------
+
+4.4 — Importância dos componentes principais
+
+Após normalização por z-score, a PCA mostrou que as quatro primeiras componentes explicam mais de 75% da variância total (aproximadamente 47% + 14% + 10% + 7%). Assim, bastam quatro 
+componentes principais para representar adequadamente o espaço de features sem perda significativa de informação.
+
+4.4.1 — Obtenção das features comprimidas
+
+As features comprimidas obtêm-se projetando os dados normalizados no espaço das quatro primeiras componentes principais. Para um instante concreto, o vetor original (com dezenas de variáveis) 
+transforma-se num vetor de quatro dimensões que sintetiza a variabilidade principal do sinal.
+
+4.4.2 — Vantagens e limitações
+
+A PCA reduz a dimensionalidade, elimina redundâncias e acelera o processamento, mas perde interpretabilidade física e não garante a melhor separação entre classes, pois é um método não 
+supervisionado.
+
+------------------------------------------------
+
+4.6 — Melhores features (Fisher Score e ReliefF)
+
+Ambos os métodos destacaram as mesmas variáveis: acc_mean_crossing_rate, gyro_mean, gyro_rms, gyro_median, acc_iqr e mag_mean_crossing_rate. Estas features refletem a intensidade e frequência 
+dos movimentos, sendo as que melhor distinguem as atividades.
+O Fisher Score privilegia diferenças médias entre classes, enquanto o ReliefF considera vizinhanças locais. Apesar das abordagens distintas, os resultados são consistentes, reforçando a 
+robustez das variáveis identificadas.
+
