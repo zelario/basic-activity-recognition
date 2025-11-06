@@ -17,7 +17,7 @@ if __name__ == "__main__":
     data = load_data_csv()
     acc_modules = variable_module(data, "Acceleration")
     mag_modules = variable_module(data, "Magnetic Field")
-    gyro_modules = variable_module(data, "Angular Velocity")
+    gyro_modules = variable_module(data, "Angular Velocity") 
 
     variables_data = [
 		("Acceleration (|Acc|)", acc_modules),
@@ -32,7 +32,12 @@ if __name__ == "__main__":
 
     #Exercicio 3.2
 
-    outlier_density(data, acc_modules)
+    print("\n--- Acceleration Outlier Densities via IQR ---\n")
+    outlier_density_iqr(data, acc_modules)
+    print("\n--- Magnetic Field Outlier Densities via IQR ---\n")
+    outlier_density_iqr(data, mag_modules)
+    print("\n--- Angular Velocity Outlier Densities via IQR ---\n")
+    outlier_density_iqr(data, gyro_modules)
 
     #Exercicio 3.3 e 3.4
 
@@ -42,8 +47,16 @@ if __name__ == "__main__":
 
     activity_choice = int(input("Pick an activity (1-16): "))
 
+    print("\n--- Acceleration Outliers via Z-Score ---\n")
+    outlier_density_z_score(data, acc_modules, k)
     acc_outlier_idxs = z_score(data, acc_modules, activity_choice, k)
+
+    print("\n--- Magnetic Field Outliers via Z-Score ---\n")
+    outlier_density_z_score(data, mag_modules, k)
     mag_outlier_idxs = z_score(data, mag_modules, activity_choice, k)
+
+    print("\n--- Angular Velocity Outliers via Z-Score ---\n")
+    outlier_density_z_score(data, gyro_modules, k)
     gyro_outlier_idxs = z_score(data, gyro_modules, activity_choice, k)
 
     plot_zscore_outliers(data, acc_modules, "Acceleration", activity_choice, acc_outlier_idxs)

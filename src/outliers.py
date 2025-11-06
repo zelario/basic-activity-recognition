@@ -53,7 +53,7 @@ def boxplot_variable(data, var_modules, variable, device):
     plt.tight_layout()
     plt.show()
 
-def outlier_density(data, var_modules):
+def outlier_density_iqr(data, var_modules):
 
     right_wrist_mask = data[:, 0] == 2
     activities = data[right_wrist_mask, 11]
@@ -61,7 +61,6 @@ def outlier_density(data, var_modules):
     activities_number = np.arange(1, 17)
     densities = np.zeros(16) 
 
-    print("\n--- Outlier Densities by Activity (Right Wrist Sensor only): ---\n")
     for idx, act in enumerate(activities_number):
         activity_mask = activities == act
         act_modules = var_modules_right[activity_mask]
@@ -73,6 +72,32 @@ def outlier_density(data, var_modules):
         density = np.mean(outliers) * 100  
         densities[idx] = density
         print(f"Activity {act}: {density:.2f}% ({np.sum(outliers)}/{act_modules.size})")
+
+def outlier_density_z_score(data, var_modules, k):
+
+    right_wrist_mask = data[:, 0] == 2
+    activities = data[right_wrist_mask, 11]
+    var_modules_right = var_modules[right_wrist_mask]
+
+    for activity in range(1, 17):
+        activity_mask = activities == activity
+        act_vals = var_modules_right[activity_mask]
+        n = act_vals.size
+        if n == 0:
+            print(f"Activity {activity}: 0.00% (0/0)")
+            continue
+
+        std = np.std(act_vals)
+        if std == 0 or not np.isfinite(std):
+            density = 0.0
+            outlier_count = 0
+        else:
+            z_scores = (act_vals - np.mean(act_vals)) / std
+            outlier_mask = np.abs(z_scores) > k
+            outlier_count = int(outlier_mask.sum())
+            density = float(outlier_mask.mean() * 100.0)
+
+        print(f"Activity {activity}: {density:.2f}% ({outlier_count}/{n})")
 
 def z_score(data, var_modules, activity, k):
     activity_mask = data[:, 11] == activity
