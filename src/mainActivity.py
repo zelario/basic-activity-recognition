@@ -94,7 +94,7 @@ if __name__ == "__main__":
     # Exercicio 4.2
     features, labels, feature_names = extract_features(
         data, acc_modules, mag_modules, gyro_modules,
-        fs=50.0, window_duration=5.0, overlap_ratio=0.5)
+        fs=51.5, window_duration=5.0, overlap_ratio=0.5)
 
     # Exercicio 4.3
 
