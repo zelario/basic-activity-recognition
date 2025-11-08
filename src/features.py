@@ -1,30 +1,52 @@
 import numpy as np
 from numpy.lib.stride_tricks import sliding_window_view
 import matplotlib.pyplot as plt
-from scipy.stats import kruskal, kstest
+from scipy.stats import kstest, f_oneway, kruskal
 from sklearn.decomposition import PCA
 
 # --- Exercise 4.1: Statistical Tests ---
 
-def normality_test(data, modules, alpha=0.05):
-    normality_results = {}
-    for activity in range(1, 17):
-        activity_modules = modules[data[:, 11] == activity]
-        z_values = (activity_modules - np.mean(activity_modules)) / np.std(activity_modules)
-        stat, p_value = kstest(z_values, "norm")
-        normality_results[activity] = (stat, p_value)
+def normality_and_significance(data, variables_data, alpha=0.05):
+    print("\n--- Normality and Significance Tests ---\n")
+    for name, modules in variables_data:
+        print(f"\n--- Variable: {name} ---\n")
 
+        normality_results = {}
+        activity_groups = []
 
-    p_values = [p for (_, p) in normality_results.values() if not np.isnan(p)]
-    percentage_normal = 100.0 * sum(p > alpha for p in p_values) / len(p_values) if p_values else 0.0
+        for activity in range(1, 17):
+            activity_modules = modules[data[:, 11] == activity]
+            if len(activity_modules) < 2:
+                print(f"Activity {activity}: Not enough data")
+                continue
 
-    activity_groups = [modules[data[:, 11] == activity]
-                       for activity in range(1, 17)
-                       if np.sum(data[:, 11] == activity) > 1]
+            z_values = (activity_modules - np.mean(activity_modules)) / np.std(activity_modules)
+            stat, p_value = kstest(z_values, 'norm')
+            normality_results[activity] = p_value
+            activity_groups.append(activity_modules)
 
-    stat, p_value = kruskal(*activity_groups)
+            mean_val = np.mean(activity_modules)
+            normal_str = "Normal" if p_value > alpha else "Not normal"
+            print(f"Activity {activity}: mean = {mean_val:.4f}, p = {p_value:.4f} -> {normal_str}")
 
-    return stat, p_value, percentage_normal
+        if not activity_groups:
+            print("No sufficient data for any activity.")
+            continue
+
+        if all(p > alpha for p in normality_results.values()):
+            test_stat, test_p = f_oneway(*activity_groups)
+            test_name = "ANOVA"
+        else:
+            test_stat, test_p = kruskal(*activity_groups)
+            test_name = "Kruskal-Wallis"
+
+        print(f"\nTest used: {test_name}")
+        print(f"Statistic = {test_stat:.4f} | p-value = {test_p:.4f}")
+        if test_p < alpha:
+            print("Result: Significant differences between activities")
+        else:
+            print("Result: No significant differences between activities")
+
 
 # --- Exercise 4.2: Feature Extraction ---
 

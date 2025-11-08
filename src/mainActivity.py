@@ -82,14 +82,8 @@ if __name__ == "__main__":
 
     #Exercicio 4.1
 
-    print("--- Normality Test - Kruskal-Wallis ---")
-    alpha=0.05
-    for name, modules in variables_data:
-        stat, p, pct_norm = normality_test(data, modules, alpha)
-
-        print(f"\n- {name}")
-        print(f"Normality (KS): {pct_norm}%  p > {alpha}")
-        print(f"Statistic = {stat} | p = {p}")
+    alpha = 0.05
+    normality_and_significance(data, variables_data, alpha)
 
     # Exercicio 4.2
     features, labels, feature_names = extract_features(
