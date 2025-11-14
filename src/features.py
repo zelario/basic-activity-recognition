@@ -80,6 +80,42 @@ def sliding_windows(data, fs, window_duration=5.0, overlap=0.5):
 
     return windows
 
+def sliding_windows_timestamp(data, fs, window_duration=5.0, overlap=0.5):
+    labels = np.asarray(data[:, 11]).astype(int)
+    device_ids = np.asarray(data[:, 0]).astype(int)
+    participants = np.asarray(data[:, 12]).astype(int)
+    timestamps = np.asarray(data[:, 10]).astype(float)
+
+    window_duration_ms = int(window_duration * 1000)
+    n = len(data)
+    windows = []
+    start = 0
+    while start < n:
+        activity_ref = labels[start]
+        device_ref = device_ids[start]
+        participant_ref = participants[start]
+        t_start = timestamps[start]
+
+        end = start
+        while (end < n and
+               labels[end] == activity_ref and
+               device_ids[end] == device_ref and
+               participants[end] == participant_ref and
+               timestamps[end] - t_start < window_duration_ms):
+            end += 1
+
+        if end - start > 1:
+            windows.append((start, end, activity_ref, device_ref, participant_ref))
+
+        # Overlap
+        if overlap > 0:
+            step = int((end - start) * (1.0 - overlap))
+            start += max(1, step)
+        else:
+            start = end
+
+    return windows
+
 def extract_window_features(signal):
 
     # Mean value
@@ -149,7 +185,7 @@ def extract_features(data, acceleration_modules, magnetic_modules, gyroscope_mod
                     [f"gyro_{name}" for name in base_feature_names] + \
                     [f"mag_{name}" for name in base_feature_names]
 
-    windows = sliding_windows(data, fs, window_duration, overlap_ratio)
+    windows = sliding_windows_timestamp(data, fs, window_duration, overlap_ratio)
 
     features = []
     labels = []
@@ -247,10 +283,15 @@ def fisher(features, labels, feature_names):
     sorted_idx = np.argsort(scores)[::-1]
     sorted_scores = scores[sorted_idx]
 
+    top10 = []
+
     print("\n========== Fisher Score ==========\n")
     for i in range(min(10, n_features)):
         name = feature_names[sorted_idx[i]] if feature_names else f"feature_{sorted_idx[i]}"
         print(f"{i+1:02d}. {name:>20s}  |  score = {sorted_scores[i]:.4f}")
+        top10.append(name)
+
+    return top10
 
 
 def relief(features, labels, feature_names, n_neighbors=50, n_samples=500):
@@ -279,7 +320,12 @@ def relief(features, labels, feature_names, n_neighbors=50, n_samples=500):
     sorted_idx = np.argsort(scores)[::-1]
     sorted_scores = scores[sorted_idx]
 
+    top10 = []
+
     print("\n========== ReliefF ==========\n")
     for i in range(min(10, n_features)):
         name = feature_names[sorted_idx[i]] if feature_names else f"feature_{sorted_idx[i]}"
         print(f"{i+1:02d}. {name:>20s}  |  score = {sorted_scores[i]:.4f}")
+        top10.append(name)
+    
+    return top10
