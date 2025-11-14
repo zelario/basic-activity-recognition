@@ -8,6 +8,7 @@
 # Idk maybe maven files
 *.properties
 *.lst
+*.npy
 
 # User-specific stuff
 .idea/**/workspace.xml
