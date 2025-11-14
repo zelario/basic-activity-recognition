@@ -86,21 +86,20 @@ if __name__ == "__main__":
     normality_and_significance(data, variables_data, alpha)
 
     # Exercicio 4.2
-    features, labels, feature_names = extract_features(
+    features_matrix, labels, feature_names = extract_features(
         data, acc_modules, mag_modules, gyro_modules,
         fs=51.5, window_duration=5.0, overlap_ratio=0.5)
 
     # Exercicio 4.3
 
     n_components = 36
-    pca_results = pca(features, n_components)
+    pca_matrix, explained_variance_ratio = pca(features_matrix, n_components)
 
     # Exercicio 4.4
 
-    pca_analysis(pca_results)
+    pca_analysis(explained_variance_ratio)
 
     # Exercicio 4.5
 
-    fisher(features, labels, feature_names)
-    relief(features, labels, feature_names=feature_names, n_neighbors=100)
-
+    fisher(features_matrix, labels, feature_names)
+    relief(features_matrix, labels, feature_names=feature_names, n_neighbors=100)

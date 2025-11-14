@@ -29,16 +29,14 @@ def load_part_data_csv(part_number):
 
     for device in range(1, 6):
         filename = f"data/part{part_number}/part{part_number}dev{device}.csv"
-        
         try:
             with open(filename, 'r') as file:
                 csv_reader = csv.reader(file)
                 for row in csv_reader:
-                    data.append([float(x) for x in row])
+                    data.append([float(x) for x in row] + [part_number])
         except FileNotFoundError:
             print(f"Arquivo não encontrado.")
             continue
-    
     return np.array(data)
 
 def load_data_csv():

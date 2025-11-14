@@ -53,25 +53,28 @@ def normality_and_significance(data, variables_data, alpha=0.05):
 def sliding_windows(data, fs, window_duration=5.0, overlap=0.5):
     labels = np.asarray(data[:, 11]).astype(int)      
     device_ids = np.asarray(data[:, 0]).astype(int)   
-
+    participants = np.asarray(data[:, 12]).astype(int)  
     window_size = int(round(window_duration * fs))
     step = max(1, int(round(window_size * (1.0 - overlap))))
 
     label_windows = sliding_window_view(labels, window_shape=window_size)
+    participant_windows = sliding_window_view(participants, window_shape=window_size)
     device_windows = sliding_window_view(device_ids, window_shape=window_size)
 
     starts = np.arange(0, label_windows.shape[0], step)
     label_candidates = label_windows[starts]
     device_candidates = device_windows[starts]
+    participant_candidates = participant_windows[starts]
 
     mask_activity = np.all(label_candidates == label_candidates[:, :1], axis=1)
     mask_device = np.all(device_candidates == device_candidates[:, :1], axis=1)
-    valid_mask = mask_activity & mask_device
+    mask_participant = np.all(participant_candidates == participant_candidates[:, :1], axis=1)
+    valid_mask = mask_activity & mask_device & mask_participant
 
     valid_starts = starts[valid_mask]
 
     windows = [
-        (int(s), int(s + window_size), int(labels[s]), int(device_ids[s]))
+        (int(s), int(s + window_size), int(labels[s]), int(device_ids[s]), int(participants[s]))
         for s in valid_starts
     ]
 
@@ -150,10 +153,9 @@ def extract_features(data, acceleration_modules, magnetic_modules, gyroscope_mod
 
     features = []
     labels = []
-    devices = []
     valid_windows, discarded_windows = 0, 0
 
-    for (start_idx, end_idx, activity_label, device_id) in windows:
+    for (start_idx, end_idx, activity_label, device_id, participant) in windows:
         acc_window = acceleration_modules[start_idx:end_idx]
         gyro_window = gyroscope_modules[start_idx:end_idx]
         mag_window = magnetic_modules[start_idx:end_idx]
@@ -167,14 +169,14 @@ def extract_features(data, acceleration_modules, magnetic_modules, gyroscope_mod
         mag_features = extract_window_features(mag_window)
 
         combined_features = acc_features + gyro_features + mag_features
+
+        participant = int(data[start_idx, 12])  # participant ID is in column 12
+        labels.append((activity_label, participant))
         features.append(combined_features)
-        labels.append(activity_label)
-        devices.append(device_id)
         valid_windows += 1
 
     features = np.array(features, dtype=float)
-    labels = np.array(labels, dtype=int)
-    devices = np.array(devices, dtype=int)
+    labels = np.array(labels, dtype=int) 
 
     features = zscore_normalization(features)
 
@@ -187,26 +189,19 @@ def pca(features, n_components=None):
     n_components = n_components or min(features.shape)
 
     pca = PCA(n_components=n_components)
-    projected_data = pca.fit_transform(features)
+    pca_matrix = pca.fit_transform(features)
 
     explained_variance_ratio = pca.explained_variance_ratio_
 
-    return {
-        "projected_data": projected_data,
-        "components": pca.components_,
-        "explained_variance_ratio": explained_variance_ratio,
-        "pca_model": pca,
-        "features": features
-    }
+    return pca_matrix, explained_variance_ratio
 
 # --- Exercise 4.4: PCA analysis  ---
 
-def pca_analysis(pca_results):
-    explained_ratio = pca_results["explained_variance_ratio"]
-    cumulative = np.cumsum(explained_ratio)
+def pca_analysis(explained_variance_ratio):
+    cumulative = np.cumsum(explained_variance_ratio)
 
     plt.figure(figsize=(8, 5))
-    plt.bar(range(1, len(explained_ratio) + 1), explained_ratio,
+    plt.bar(range(1, len(explained_variance_ratio) + 1), explained_variance_ratio,
             alpha=0.6, label="Explained Variance Ratio")
     plt.plot(range(1, len(cumulative) + 1), cumulative,
              color='red', marker='o', label="Cumulative Variance")
@@ -229,14 +224,15 @@ def fisher(features, labels, feature_names):
 
     labels = np.array(labels)
     n_features = features.shape[1]
-    classes = np.unique(labels)
+    activity_labels = labels[:, 0]
+    classes = np.unique(activity_labels)
     overall_mean = np.nanmean(features, axis=0)
 
     nominator = np.zeros(n_features)
     denominator = np.zeros(n_features)
 
     for cls in classes:
-        cls_mask = labels == cls
+        cls_mask = activity_labels == cls
         cls_data = features[cls_mask]
         cls_count = np.sum(~np.isnan(cls_data), axis=0)
         cls_mean = np.nanmean(cls_data, axis=0)
@@ -263,7 +259,7 @@ def relief(features, labels, feature_names, n_neighbors=50, n_samples=500):
     n_features = features.shape[1]
     sample_idx = np.random.choice(n_total, min(n_samples, n_total), replace=False)
     X_sample = features[sample_idx]
-    y_sample = labels[sample_idx]
+    y_sample = np.array(labels)[sample_idx, 0]
 
     nominator = np.zeros(n_features)
 
