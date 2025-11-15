@@ -1,17 +1,20 @@
 from load import *
 from outliers import *
 from features import *
+from augmentation import *
 
 import numpy as np
 
 if __name__ == "__main__":
 
+    # Load files from first part
+
     try:
         data = np.load("data/labels.npy")
-        features_matrix = np.load("data/features_matrix.npy")
-        pca_matrix = np.load("data/pca_matrix.npy")
-        scores_matrix = np.load("data/scores_matrix.npy")
-        labels_matrix = np.load("data/labels_matrix.npy")
+        features = np.load("data/features.npy")
+        pca = np.load("data/pca.npy")
+        scores = np.load("data/scores.npy")
+        labels = np.load("data/labels.npy")
         print("--- Loaded data from existing .npy files ---")
 
     except FileNotFoundError:
@@ -39,7 +42,9 @@ if __name__ == "__main__":
         ], dtype=object)
 
         np.save("data/data.npy", data)
-        np.save("data/features_matrix.npy", features_matrix)
-        np.save("data/pca_matrix.npy", pca_matrix)
-        np.save("data/labels_matrix.npy", labels_matrix)
-        np.save("data/scores_matrix.npy", scores_matrix)
+        np.save("data/features.npy", features)
+        np.save("data/pca.npy", pca)
+        np.save("data/labels.npy", labels)
+        np.save("data/scores.npy", scores)
+
+    features, pca, labels = discard_activities(features, pca, labels)

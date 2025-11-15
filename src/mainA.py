@@ -19,7 +19,7 @@ if __name__ == "__main__":
     mag_modules = variable_module(data, "Magnetic Field")
     gyro_modules = variable_module(data, "Angular Velocity") 
 
-    variables_data = [
+    variables_modules = [
 		("Acceleration (|Acc|)", acc_modules),
 		("Angular Velocity (|Gyro|)", gyro_modules),
 		("Magnetic Field (|Mag|)", mag_modules)
@@ -27,7 +27,7 @@ if __name__ == "__main__":
 
     print("\n--- Boxplots of Variable Modules ---")
     device_choice = int(input("\nPick a device (1-5): "))
-    for name, modules in variables_data:
+    for name, modules in variables_modules:
         boxplot_variable(data, modules, name, device_choice)
 
     #Exercicio 3.2
@@ -83,17 +83,16 @@ if __name__ == "__main__":
     #Exercicio 4.1
 
     alpha = 0.05
-    normality_and_significance(data, variables_data, alpha)
+    normality_and_significance(data, variables_modules, alpha)
 
     # Exercicio 4.2
-    features_matrix, labels, feature_names = extract_features(
-        data, acc_modules, mag_modules, gyro_modules,
-        fs=51.5, window_duration=5.0, overlap_ratio=0.5)
+    
+    features, labels, feature_names = extract_features(data, variables_modules, fs=51.5, window_duration=5.0, overlap_ratio=0.5)
 
     # Exercicio 4.3
 
     n_components = 36
-    pca_matrix, explained_variance_ratio = pca(features_matrix, n_components)
+    pca, explained_variance_ratio = pca(features, n_components)
 
     # Exercicio 4.4
 
@@ -101,5 +100,5 @@ if __name__ == "__main__":
 
     # Exercicio 4.5
 
-    fisher(features_matrix, labels, feature_names)
-    relief(features_matrix, labels, feature_names=feature_names, n_neighbors=100)
+    fisher(features, labels, feature_names)
+    relief(features, labels, feature_names=feature_names, n_neighbors=100)
