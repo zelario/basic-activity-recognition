@@ -1,5 +1,6 @@
 """
 Feature extraction, statistical tests and dimensionality reduction utilities.
+File used for full exercise 4.
 
 This module contains helper functions used in the ECAC project for:
 - running normality and group significance tests across activities,
@@ -375,7 +376,7 @@ def pca(features, n_components=None):
 
     return pca_matrix, explained_variance_ratio
 
-# --- Exercise 4.4: PCA analysis  ---
+# --- Exercise 4.4: PCA Analysis  ---
 
 def pca_analysis(explained_variance_ratio):
     """Plot the explained variance ratio and cumulative variance from PCA.

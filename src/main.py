@@ -1,20 +1,19 @@
 from load import *
 from outliers import *
 from features import *
+from augmentation import *
 
-if __name__ == "__main__":
+def partA ():
 
-    #Exercicio 2
+    # --- Exercise 1: Load Part Data ---
 
-    '''
     part_data = load_part_data(0)
-    print("\nParticipant 0 data:\n")
-    print(part_data)
-    '''
 
-    #Exercicio 3.1
+    # --- Exercise 2: Load Full Data ---
 
-    data = load_data_csv()
+    data = load_data()
+
+    # --- Exercise 3.1: Variable Modules ---
     acc_modules = variable_module(data, "Acceleration")
     mag_modules = variable_module(data, "Magnetic Field")
     gyro_modules = variable_module(data, "Angular Velocity") 
@@ -30,7 +29,7 @@ if __name__ == "__main__":
     for name, modules in variables_modules:
         boxplot_variable(data, modules, name, device_choice)
 
-    #Exercicio 3.2
+    # --- Exercise 3.2: Outlier Densities via IQR ---
 
     print("\n--- Acceleration Outlier Densities via IQR ---\n")
     outlier_density_iqr(data, acc_modules)
@@ -39,7 +38,7 @@ if __name__ == "__main__":
     print("\n--- Angular Velocity Outlier Densities via IQR ---\n")
     outlier_density_iqr(data, gyro_modules)
 
-    #Exercicio 3.3 e 3.4
+    # --- Exercise 3.3 and 3.4: Outlier Detection via Z-Score ---
 
     print("\n--- Outlier Detection via Z-Score ---\n")
 
@@ -63,7 +62,7 @@ if __name__ == "__main__":
     plot_zscore_outliers(data, mag_modules, "Magnetic Field", activity_choice, mag_outlier_idxs)
     plot_zscore_outliers(data, gyro_modules, "Angular Velocity", activity_choice, gyro_outlier_idxs)
 
-    #Exercicio 3.6 e 3.7
+    # --- Exercise 3.6 and 3.7: Clustering ---
 
     n_clusters = int(input("\n--- K-Means Clustering ---\n\nChoose the number of clusters: (e.g., 2, 3, 4): "))
     print(f"\n--- Acceleration K-Means Results ---\n")
@@ -80,25 +79,43 @@ if __name__ == "__main__":
     
     plot_dbscan_clusters(data, activity_choice, device_choice, acc_modules, gyro_modules, mag_modules)
 
-    #Exercicio 4.1
+    # --- Exercise 4.1: Statistical Tests ---
 
     alpha = 0.05
     normality_and_significance(data, variables_modules, alpha)
 
-    # Exercicio 4.2
+    # --- Exercise 4.2: Feature Extraction ---
     
     features, labels, feature_names = extract_features(data, variables_modules, fs=51.5, window_duration=5.0, overlap_ratio=0.5)
 
-    # Exercicio 4.3
+    # --- Exercise 4.3: PCA ---
 
     n_components = 36
     pca, explained_variance_ratio = pca(features, n_components)
 
-    # Exercicio 4.4
+    # --- Exercise 4.4: PCA Analysis ---
 
     pca_analysis(explained_variance_ratio)
 
-    # Exercicio 4.5
+    # --- Exercise 4.5: Fisher Scores and ReliefF ---
 
     fisher(features, labels, feature_names)
     relief(features, labels, feature_names=feature_names, n_neighbors=100)
+
+def partB ():
+
+    # --- Pre game data loading and preprocessing ---
+
+    features, pca, scores, labels = reload_data()
+
+    features, pca, labels = discard_activities(features, pca, labels)
+
+if __name__ == "__main__":
+
+    #--- Run Part A Exercises ---
+
+    #partA()
+
+    #--- Run Part B Exercises ---
+
+    partB()
