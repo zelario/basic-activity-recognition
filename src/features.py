@@ -2,7 +2,7 @@
 Feature extraction, statistical tests and dimensionality reduction utilities.
 File used for full exercise 4.
 
-This module contains helper functions used in the ECAC project for:
+This module contains functions used in the project for:
 - running normality and group significance tests across activities,
 - creating sliding windows from raw sensor data (both index- and timestamp-based),
 - extracting time-domain and simple spectral features from windows,
@@ -45,7 +45,7 @@ def normality_and_significance(data, variables_modules, alpha=0.05):
     alpha : float
         Significance threshold for tests (default 0.05)."""
 
-    print("\n--- Normality and Significance Tests ---\n")
+    print("--- Normality and Significance Tests ---")
     for name, modules in variables_modules:
         print(f"\n--- Variable: {name} ---\n")
 
@@ -350,7 +350,7 @@ def extract_features(data, variables_modules, fs, window_duration=5.0, overlap_r
 
 # --- Exercise 4.3: PCA ---
 
-def pca(features, n_components=None):
+def compute_pca(features, n_components=None):
     """Perform principal component analysis and return projected data.
 
     Parameters
@@ -378,7 +378,7 @@ def pca(features, n_components=None):
 
 # --- Exercise 4.4: PCA Analysis  ---
 
-def pca_analysis(explained_variance_ratio):
+def analyse_pca(explained_variance_ratio):
     """Plot the explained variance ratio and cumulative variance from PCA.
 
     Parameters
