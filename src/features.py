@@ -524,5 +524,5 @@ def relief(features, labels, feature_names, n_neighbors=50, n_samples=500):
         name = feature_names[sorted_idx[i]] if feature_names else f"feature_{sorted_idx[i]}"
         print(f"{i+1:02d}. {name:>20s}  |  score = {sorted_scores[i]:.4f}")
         top10.append(name)
-    
+        
     return top10

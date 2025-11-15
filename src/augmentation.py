@@ -1,9 +1,25 @@
-import numpy as np
-import matplotlib.pyplot as plt
-from imblearn.over_sampling import SMOTE
+
+"""
+Data augmentation and feature artifact utilities for ECAC project.
+File used for pre-game and feature engineering steps.
+
+This module contains functions for:
+- loading or recomputing cached feature artifacts,
+- discarding samples by activity label,
+- performing SMOTE oversampling,
+- visualizing augmented data and PCA results.
+
+Artifacts expected in `data/` folder:
+- features.npy, pca.npy, scores.npy, labels.npy
+"""
 from load import *
 from outliers import *
 from features import *
+
+import numpy as np
+import matplotlib.pyplot as plt
+from imblearn.over_sampling import SMOTE
+from sklearn.decomposition import PCA
 
 # --- Pre Game ---
 
@@ -34,22 +50,17 @@ def reload_data():
 		pca = np.load("data/pca.npy", allow_pickle=True)
 		scores = np.load("data/scores.npy", allow_pickle=True)
 		labels = np.load("data/labels.npy", allow_pickle=True)
-		print("--- Loaded data from existing .npy files ---")
 
 	except FileNotFoundError:
 		data = load_data()
-		acc_modules = variable_module(data, "Acceleration")
-		mag_modules = variable_module(data, "Magnetic Field")
-		gyro_modules = variable_module(data, "Angular Velocity")
+		variables_modules = compute_modules(data)
 
-		features, labels, feature_names = extract_features(
-			data, acc_modules, mag_modules, gyro_modules,
-			fs=51.5, window_duration=5.0, overlap_ratio=0.5)
+		features, labels, feature_names = extract_features(data, variables_modules, fs=51.5, window_duration=5.0, overlap_ratio=0.5)
 
 		n_components = 36
-		pca, explained_variance_ratio = pca(features, n_components)
+		pca, explained_variance_ratio = compute_pca(features, n_components)
 
-		pca_analysis(explained_variance_ratio)
+		analyse_pca(explained_variance_ratio)
 
 		fisher_features = fisher(features, labels, feature_names)
 		relief_features = relief(features, labels, feature_names=feature_names, n_neighbors=100)
@@ -87,7 +98,7 @@ def discard_activities(features, pca, labels):
 	mask = labels[:, 0] <= 7
 	return features[mask], pca[mask], labels[mask]
 
-# --- Game On ---
+# --- Exercise 1.1: Data Augmentation with SMOTE ---
 
 def analyze_activity_balance(labels):
 	"""
@@ -95,112 +106,115 @@ def analyze_activity_balance(labels):
 
 	Parameters
 	----------
-	labels : np.ndarray
+	labels : matrix, shape (n_samples, 2)
 		Array of shape (n_samples, 2), where each row contains [activity, participant].
 
 	Returns
 	-------
-	dict
-		Dictionary mapping activity label to number of samples.
+	label_count: dictionary
+		Dictionary mapping activity label to number of samples."""
 
-	Prints
-	------
-	Number of samples for each activity in the dataset.
-	Useful for checking if the dataset is balanced across activities.
-	"""
 	activities = labels[:, 0]
 	unique, counts = np.unique(activities, return_counts=True)
-	print("Activity balance:")
-	for u, c in zip(unique, counts):
-		print(f"Activity {u}: {c} samples")
-	return dict(zip(unique, counts))
+	print("\n--- Activity sample count ---\n")
+	for activity, count in zip(unique, counts):
+		print(f"Activity {activity}: {count} samples")
+	label_count = dict(zip(unique, counts))
+	return label_count
 
-def smote_generate_samples(features, labels, activity, participant, k=1, random_state=42):
-	"""
-	Generate synthetic samples for a specific activity and participant using SMOTE.
 
-	Parameters
-	----------
-	features : np.ndarray
-		Feature matrix of shape (n_samples, n_features).
-	labels : np.ndarray
-		Array of shape (n_samples, 2), where each row contains [activity, participant].
-	activity : int
-		Activity label for which to generate synthetic samples.
-	participant : int
-		Participant ID for which to generate synthetic samples.
-	k : int, optional
-		Number of synthetic samples to generate (default is 1).
-	random_state : int, optional
-		Random seed for reproducibility (default is 42).
-
-	Returns
-	-------
-	X_synth : np.ndarray
-		Synthetic feature matrix of shape (k, n_features).
-	labels_synth : np.ndarray
-		Synthetic labels array of shape (k, 2), each row is [activity, participant].
-
-	Raises
-	------
-	ValueError
-		If there are not enough samples for SMOTE to operate (minimum 2 required).
-
-	Notes
-	-----
-	Only samples from the specified activity and participant are used for generating synthetic data.
-	SMOTE creates new samples by interpolating between existing samples.
-	"""
-	# Filter for the given activity and participant
-	mask = (labels[:, 0] == activity) & (labels[:, 1] == participant)
-	X = features[mask]
-	y = labels[mask][:, 0]  # SMOTE expects 1D labels
-	if len(X) < 2:
-		raise ValueError("Not enough samples for SMOTE.")
-	smote = SMOTE(sampling_strategy={activity: len(X) + k}, k_neighbors=min(5, len(X)-1), random_state=random_state)
-	X_aug, y_aug = smote.fit_resample(X, y)
-	# Get only the synthetic samples
-	n_orig = len(X)
-	X_synth = X_aug[n_orig:]
-	y_synth = y_aug[n_orig:]
-	# Build synthetic labels (activity, participant)
-	labels_synth = np.column_stack([y_synth, np.full_like(y_synth, participant)])
-	return X_synth, labels_synth
-
-def visualize_synthetic_samples(features, labels, X_synth, labels_synth):
-	"""
-	Visualize real and synthetic samples using a 2D scatter plot of the first two features.
+def augment_activity_data(features, pca, labels, n_samples=3, activity=4, participant=3):
+	"""Augment the dataset by generating synthetic samples for a specific activity and participant using SMOTE.
 
 	Parameters
 	----------
-	features : np.ndarray
-		Feature matrix of shape (n_samples, n_features) for real samples.
-	labels : np.ndarray
-		Array of shape (n_samples, 2), where each row contains [activity, participant] for real samples.
-	X_synth : np.ndarray
-		Feature matrix of shape (k, n_features) for synthetic samples.
-	labels_synth : np.ndarray
-		Array of shape (k, 2), where each row contains [activity, participant] for synthetic samples.
+	features : matrix, shape (n_samples, n_features)
+		Feature matrix of shape (n_samples, n_features) for all samples.
+	pca : matrix, shape (n_samples, n_components)
+		PCA-transformed matrix of shape (n_samples, n_components) for all samples.
+	labels : matrix, shape (n_samples, 2)
+		Array of shape (n_samples, 2), where each row contains [activity, participant] for each sample.
+	n_samples : int, optional
+		Number of synthetic samples to generate (default is 3).
+	activity : int, optional
+		Activity label to augment (default is 4).
+	participant : int, optional
+		Participant ID to augment (default is 3).
 
 	Returns
 	-------
-	None
+	features_augmented : matrix, shape (n_samples + n_synthetic, n_features)
+		Feature matrix with synthetic samples appended.
+	pca_augmented : matrix, shape (n_samples + n_synthetic, n_components)
+		PCA matrix with synthetic samples appended.
+	labels_augmented : matrix, shape (n_samples + n_synthetic, 2)
+		Label array with synthetic labels appended.
+	new_rows : np.ndarray
+		Array of row indices (in the augmented arrays) corresponding to the new synthetic samples."""
 
-	Displays
-	--------
-	A matplotlib scatter plot:
-		- Real samples are colored by activity.
-		- Synthetic samples are highlighted in red with a star marker.
-		- Only the first two features are plotted for visualization clarity.
-	"""
+	print("\n--- Augmenting dataset with SMOTE ---\n")
+
+	test=False
+	if test:
+		n_samples= int(input("Number of samples: "))
+		activity= int(input("Activity to augment: "))
+		participant= int(input("Participant to augment: "))
+
+	# Filter for the chosen activity
+	mask = (labels[:, 0] == activity)
+	activity_features = features[mask]
+	
+	# Create a dummy target for SMOTE (must have at least 2 samples)
+	dummy = np.array([0] * (activity_features.shape[0] - 1) + [1])
+	smote = SMOTE(sampling_strategy={0: activity_features.shape[0], 1: activity_features.shape[0] + n_samples}, k_neighbors=min(5, activity_features.shape[0]-1))
+	new_activity_features, new_dummy = smote.fit_resample(activity_features, dummy)
+
+	# Only keep the synthetic samples (those with class 1 and index >= activity_features.shape[0])
+	synthetic_mask = (new_dummy == 1)[activity_features.shape[0]:]
+	synthetic_features = new_activity_features[activity_features.shape[0]:][synthetic_mask]
+	
+	# Create synthetic labels
+	synthetic_labels = np.tile([activity, participant], (synthetic_features.shape[0], 1))
+
+	# Project synthetic features into PCA space
+	pca_model = PCA(n_components=pca.shape[1])
+	pca_model.fit(features)
+	synthetic_pca = pca_model.transform(synthetic_features)
+
+	# Concatenate synthetic samples to original data
+	features_augmented = np.vstack([features, synthetic_features])
+	pca_augmented = np.vstack([pca, synthetic_pca])
+	labels_augmented = np.vstack([labels, synthetic_labels])
+
+	# Indices of new synthetic samples in the augmented arrays
+	synthetic_rows = np.arange(features.shape[0], features_augmented.shape[0])
+
+	return features_augmented, pca_augmented, labels_augmented, synthetic_rows
+
+def plot_synthetic_vs_real(features, labels, scores, synthetic_rows):
+	"""Visualize real and synthetic samples using a 2D scatter plot of the first two features.
+
+	Parameters
+	----------
+	features : matrix, shape (n_samples, n_features)
+		Feature matrix of shape (n_samples, n_features) for all samples.
+	labels : matrix, shape (n_samples, 2)
+		Array of shape (n_samples, 2), where each row contains [activity, participant] for each sample.
+	synthetic_rows : array
+		Array of row indices corresponding to synthetic samples in the features/labels arrays."""
+	
 	plt.figure(figsize=(8, 6))
-	# Plot real samples
-	for act in np.unique(labels[:, 0]):
-		mask = labels[:, 0] == act
+
+	# Plot real samples by activity (excluding synthetic)
+	real_mask = np.ones(features.shape[0], dtype=bool)
+	real_mask[synthetic_rows] = False
+	for act in np.unique(labels[real_mask, 0]):
+		mask = (labels[:, 0] == act) & real_mask
 		plt.scatter(features[mask, 0], features[mask, 1], label=f"Activity {act}", alpha=0.6)
-	# Plot synthetic samples
-	plt.scatter(X_synth[:, 0], X_synth[:, 1], c='red', marker='*', s=150, label='Synthetic')
-	plt.xlabel('Feature 1')
+
+	# Plot synthetic samples on top, with black edge
+	plt.scatter(features[synthetic_rows, 0], features[synthetic_rows, 1], c='red', marker='*', s=200, edgecolor='black', linewidths=1.5, label='Synthetic', zorder=10)
+	plt.xlabel(scores[0][0])
 	plt.ylabel('Feature 2')
 	plt.title('Synthetic vs Real Samples (First 2 Features)')
 	plt.legend()

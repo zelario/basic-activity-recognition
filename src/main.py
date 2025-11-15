@@ -65,11 +65,23 @@ def partB ():
     features, pca, scores, labels = reload_data()
     features, pca, labels = discard_activities(features, pca, labels)
 
+    # --- Exercise 1.1: Analyse sample balance ---
+
+    label_count = analyze_activity_balance(labels)
+
+    # --- Exercise 1.2: Data Augmentation with SMOTE ---
+
+    features, pca, labels, synthetic_rows = augment_activity_data(features, pca, labels)
+
+    # --- Exercise 1.3: Visualize Synthetic vs Real Samples ---
+
+    plot_synthetic_vs_real(features, labels, synthetic_rows)
+
 if __name__ == "__main__":
 
     #--- Run Part A Exercises ---
 
-    partA()
+    '''partA()'''
 
     #--- Run Part B Exercises ---
 

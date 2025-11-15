@@ -1,0 +1,2 @@
+1. O smote tambem deve ter em conta o numero de samples dos participantes? 
+   Para nao ficar um participante com todos os samples criados.
