@@ -10,7 +10,7 @@ This module contains functions for:
 - visualizing augmented data and PCA results.
 
 Artifacts expected in `data/` folder:
-- features.npy, pca.npy, scores.npy, labels.npy
+- features.npy, pca.npy, names.npy, labels.npy
 """
 from load import *
 from outliers import *
@@ -28,7 +28,7 @@ def reload_data():
 	"""Load or recompute cached feature artifacts.
 
 	Attempts to load precomputed numpy artifacts from the `data/` folder:
-	`features.npy`, `pca.npy`, `scores.npy`, and `labels.npy`. If all files
+	`features.npy`, `pca.npy`, `names.npy`, and `labels.npy`. If all files
 	are present they are loaded and returned. If a FileNotFoundError occurs
 	(the cache is missing or incomplete) the function recomputes features by
 	loading the raw dataset, computing module signals, extracting
@@ -41,22 +41,23 @@ def reload_data():
 		Feature matrix.
 	pca : matrix, shape (n_windows, n_components)
 		PCA-transformed data.
-	scores : matrix, shape (3, n_features)
+	names : matrix, shape (3, n_features)
 		Object array containing `[feature_names, fisher_features, relief_features]`.
 	labels : matrix, shape (n_windows, 2)
-		Integer array where column 0 is activity and column 1 is participant id. """
+		Integer array where column 0 is activity and column 1 is participant id."""
 	
 	try:
+		data = np.load("data/data.npy", allow_pickle=True)
 		features = np.load("data/features.npy", allow_pickle=True)
 		pca = np.load("data/pca.npy", allow_pickle=True)
-		scores = np.load("data/scores.npy", allow_pickle=True)
+		names = np.load("data/names.npy", allow_pickle=True)
 		labels = np.load("data/labels.npy", allow_pickle=True)
 
 	except FileNotFoundError:
 		data = load_data()
 		variables_modules = compute_modules(data)
 
-		features, labels, feature_names = extract_features(data, variables_modules, fs=51.5, window_duration=5.0, overlap_ratio=0.5)
+		features, labels, feature_names = extract_features(data, variables_modules, window_duration=5.0, overlap_ratio=0.5)
 
 		n_components = 36
 		pca, explained_variance_ratio = compute_pca(features, n_components)
@@ -66,20 +67,21 @@ def reload_data():
 		fisher_features = fisher(features, labels, feature_names)
 		relief_features = relief(features, labels, feature_names=feature_names, n_neighbors=100)
 
-		scores = np.array([
+		names = np.array([
 			feature_names,
 			fisher_features,
 			relief_features
 		], dtype=object)
 
+		np.save("data/data.npy", data)
 		np.save("data/features.npy", features)
 		np.save("data/pca.npy", pca)
 		np.save("data/labels.npy", labels)
-		np.save("data/scores.npy", scores)
+		np.save("data/names.npy", names)
 
-	return features, pca, scores, labels
+	return data, features, pca, names, labels
 
-def discard_activities(features, pca, labels):
+def discard_activities(features=None, pca=None, labels=None, embeddings=None):
 	"""Discard samples whose activity label is greater than 7.
 
 	Parameters
@@ -96,14 +98,17 @@ def discard_activities(features, pca, labels):
 	features, pca, labels : tuple of matrixes
 		Filtered arrays containing only the rows for which activity <= 7."""
 	
-	mask = labels[:, 0] <= 7
-	return features[mask], pca[mask], labels[mask]
+	if features is not None and pca is not None and labels is not None:
+		mask = labels[:, 0] <= 7
+		return features[mask], pca[mask], labels[mask]
+	if embeddings is not None and labels is not None:
+		mask = labels[:, 0] <= 7
+		return embeddings[mask]
 
 # --- Exercise 1.1: Data Augmentation with SMOTE ---
 
 def analyze_activity_balance(labels):
-	"""
-	Analyze the balance of activity samples in the dataset.
+	"""Analyze the balance of activity samples in the dataset.
 
 	Parameters
 	----------
@@ -115,17 +120,16 @@ def analyze_activity_balance(labels):
 	label_count: dictionary
 		Dictionary mapping activity label to number of samples."""
 
+	# Count samples per activity
 	activities = labels[:, 0]
 	unique, counts = np.unique(activities, return_counts=True)
 	print("\n--- Activity sample count ---\n")
+
 	for activity, count in zip(unique, counts):
 		print(f"Activity {activity}: {count} samples")
-	label_count = dict(zip(unique, counts))
-	return label_count
 
 def augment_activity_data(features, pca, labels, activity=4, participant=3, n_samples=3, ):
-    """
-    Generate synthetic samples for a specific activity using SMOTE and project them into PCA space.
+    """Generate synthetic samples for a specific activity using SMOTE and project them into PCA space.
 
     Parameters
     ----------
@@ -187,27 +191,23 @@ def augment_activity_data(features, pca, labels, activity=4, participant=3, n_sa
     # Create synthetic labels
     synthetic_labels = np.tile([activity, participant], (n_samples, 1))
 
-    # Append to original data
-    features_augmented = np.vstack([features, synthetic_features])
-    pca_augmented = np.vstack([pca, synthetic_pca])
-    labels_augmented = np.vstack([labels, synthetic_labels])
+    return synthetic_features, synthetic_pca, synthetic_labels
 
-    # Compute indices of synthetic samples
-    synthetic_indices = np.arange(features.shape[0], features_augmented.shape[0])
-
-    return features_augmented, pca_augmented, labels_augmented, synthetic_indices
-
-def plot_synthetic_vs_real(features, labels, scores, synthetic_indices, activity=4, participant=3):
+def plot_synthetic_vs_real(features, labels, names, synthetic_features, activity=4, participant=3):
 	"""Visualize real and synthetic samples using a 2D scatter plot of the first two features.
 
 	Parameters
 	----------
 	features : matrix, shape (n_samples, n_features)
-		Feature matrix of shape (n_samples, n_features) for all samples.
+		Feature matrix of shape (n_samples, n_features) for all real samples.
 	labels : matrix, shape (n_samples, 2)
-		Array of shape (n_samples, 2), where each row contains [activity, participant] for each sample.
-	synthetic_indices : array
-		Array of row indices corresponding to synthetic samples in the features/labels arrays.
+		Array of shape (n_samples, 2) for all real samples.
+	names : matrix
+		names matrix containing feature names for plot labels.
+	synthetic_features : matrix, shape (n_synthetic, n_features)
+		Feature matrix for the synthetic samples.
+	synthetic_labels : matrix, shape (n_synthetic, 2)
+		Labels for the synthetic samples.
 	activity : int
 		The activity ID to plot.
 	participant : int
@@ -216,25 +216,18 @@ def plot_synthetic_vs_real(features, labels, scores, synthetic_indices, activity
 	
 	plt.figure(figsize=(8, 6))
 
-	# Create a mask for all real samples 
-	real_mask = np.ones(features.shape[0], dtype=bool)
-	if synthetic_indices.size > 0:
-		real_mask[synthetic_indices] = False
-
-	# Create a mask for the specific activity and participant
-	classes_mask = (labels[:, 0] == activity) & (labels[:, 1] == participant)
+	# Create a mask for the specific real samples to plot
+	real_samples_mask = (labels[:, 0] == activity) & (labels[:, 1] == participant)
 	
-	# Combine the masks to get only the real samples for the selected classes
-	full_mask = real_mask & classes_mask
-
 	# Plot the real samples for the selected activity and participant
-	plt.scatter(features[full_mask, 0], features[full_mask, 1], label="Real", alpha=0.6)
+	plt.scatter(features[real_samples_mask, 0], features[real_samples_mask, 1], label="Real", alpha=0.6)
 
-	# Plot synthetic samples on top
-	plt.scatter(features[synthetic_indices, 0], features[synthetic_indices, 1], c='red', marker='o', label='Synthetic')
+	# Plot synthetic samples directly from the provided array
+	if synthetic_features.any():
+		plt.scatter(synthetic_features[:, 0], synthetic_features[:, 1], c='red', marker='o', label='Synthetic')
 	
-	plt.xlabel(scores[0][0])
-	plt.ylabel('Feature 2')
+	plt.xlabel(names[0][0])
+	plt.ylabel(names[0][1])
 	plt.title(f'Activity {activity}, Participant {participant}: Synthetic vs Real Samples')
 	plt.legend()
 	plt.tight_layout()

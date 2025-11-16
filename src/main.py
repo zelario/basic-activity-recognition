@@ -2,6 +2,7 @@ from load import *
 from outliers import *
 from features import *
 from augmentation import *
+from embeddings import *
 
 def partA ():
 
@@ -42,7 +43,7 @@ def partA ():
 
     # --- Exercise 4.2: Feature Extraction ---
     
-    features, labels, feature_names = extract_features(data, variables_modules, fs=51.5, window_duration=5.0, overlap_ratio=0.5)
+    features, labels, feature_names = extract_features(data, variables_modules, window_duration=5.0, overlap_ratio=0.5)
 
     # --- Exercise 4.3: PCA ---
 
@@ -53,7 +54,7 @@ def partA ():
 
     analyse_pca(explained_variance_ratio)
 
-    # --- Exercise 4.5: Fisher Scores and ReliefF ---
+    # --- Exercise 4.5: Fisher names and ReliefF ---
 
     fisher(features, labels, feature_names)
     relief(features, labels, feature_names=feature_names, n_neighbors=100)
@@ -62,20 +63,29 @@ def partB ():
 
     # --- Pre game data loading and preprocessing ---
 
-    features, pca, scores, labels = reload_data()
-    features, pca, labels = discard_activities(features, pca, labels)
+    data, features, pca, names, labels = reload_data()
+    old_labels = labels.copy()
+    features, pca, labels = discard_activities(features=features, pca=pca, labels=labels)
 
     # --- Exercise 1.1: Analyse sample balance ---
 
-    label_count = analyze_activity_balance(labels)
+    analyze_activity_balance(labels)
 
     # --- Exercise 1.2: Data Augmentation with SMOTE ---
 
-    features, pca, labels, synthetic_indices = augment_activity_data(features, pca, labels)
+    synthetic_features, synthetic_pca, synthetic_labels = augment_activity_data(features, pca, labels)
 
     # --- Exercise 1.3: Visualize Synthetic vs Real Samples ---
 
-    plot_synthetic_vs_real(features, labels, scores, synthetic_indices)
+    plot_synthetic_vs_real(features, labels, names, synthetic_features)
+
+    # --- Exercise 2.1: Embeddings ---
+
+    embeddings = compute_embeddings(data, fs=51.5, window_duration=5.0, overlap_ratio=0.5, batch_size=32)
+    embeddings = discard_activities(embeddings=embeddings, labels=old_labels)
+
+    print(f"Embeddings shape after discarding activities > 7: {embeddings.shape}")
+    print(f"Labels shape after discarding activities > 7: {labels.shape}")
 
 if __name__ == "__main__":
 

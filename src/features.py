@@ -18,7 +18,6 @@ Column conventions expected in `data` arrays used by windowing functions:
 """
 
 import numpy as np
-from numpy.lib.stride_tricks import sliding_window_view
 import matplotlib.pyplot as plt
 from scipy.stats import kstest, f_oneway, kruskal
 from sklearn.decomposition import PCA
@@ -85,63 +84,7 @@ def normality_and_significance(data, variables_modules, alpha=0.05):
         else:
             print("Result: No significant differences between activities")
 
-
-# --- Exercise 4.2: Feature Extraction ---
-
-def _sliding_windows(data, fs, window_duration=5.0, overlap=0.5):
-    """Create index-based sliding windows where label/device/participant are constant.
-
-    Uses numpy's sliding_window_view to generate candidate windows of 
-    `window_duration * fs` samples and selects windows in which the
-    activity label (column 11), device id (column 0) and participant id
-    (column 12) remain constant throughout the window.
-
-    Parameters
-    ----------
-    data : matrix, shape (n_samples, 13)
-        Raw data matrix with columns for device, timestamp, label, participant.
-    fs : float
-        Sampling frequency (Hz).
-    window_duration : float
-        Window duration in seconds.
-    overlap : float
-        Fractional overlap in [0, 1).
-
-    Returns
-    -------
-    windows : list of tuples
-        Each tuple is (start_idx, end_idx, activity_id, device_id, participant_id)."""
-
-    activity_ids = np.asarray(data[:, 11]).astype(int)
-    device_ids = np.asarray(data[:, 0]).astype(int)
-    participant_ids = np.asarray(data[:, 12]).astype(int)
-    window_size = int(round(window_duration * fs))
-    step = max(1, int(round(window_size * (1.0 - overlap))))
-
-    activity_windows = sliding_window_view(activity_ids, window_shape=window_size)
-    participant_windows = sliding_window_view(participant_ids, window_shape=window_size)
-    device_windows = sliding_window_view(device_ids, window_shape=window_size)
-
-    starts = np.arange(0, activity_windows.shape[0], step)
-    activity_candidates = activity_windows[starts]
-    device_candidates = device_windows[starts]
-    participant_candidates = participant_windows[starts]
-
-    mask_activity = np.all(activity_candidates == activity_candidates[:, :1], axis=1)
-    mask_device = np.all(device_candidates == device_candidates[:, :1], axis=1)
-    mask_participant = np.all(participant_candidates == participant_candidates[:, :1], axis=1)
-    valid_mask = mask_activity & mask_device & mask_participant
-
-    valid_starts = starts[valid_mask]
-
-    windows = [
-        (int(s), int(s + window_size), int(activity_ids[s]), int(device_ids[s]), int(participant_ids[s]))
-        for s in valid_starts
-    ]
-
-    return windows
-
-def _sliding_windows_timestamp(data, fs, window_duration=5.0, overlap=0.5):
+def _sliding_windows(data, window_duration=5.0, overlap=0.5):
     """Create sliding windows using timestamps and enforce label/device/participant continuity.
 
     The function uses the timestamp column to limit window duration. 
@@ -152,8 +95,6 @@ def _sliding_windows_timestamp(data, fs, window_duration=5.0, overlap=0.5):
     ----------
     data : matrix, shape (n_samples, 13)
         Raw data matrix with timestamp and label columns.
-    fs : float
-        Sampling frequency (Hz) - kept for compatibility with other windowing functions.
     window_duration : float
         Window length in seconds.
     overlap : float
@@ -188,7 +129,7 @@ def _sliding_windows_timestamp(data, fs, window_duration=5.0, overlap=0.5):
             end += 1
 
         if end - start > 1:
-            windows.append((start, end, activity_ref, device_ref, participant_ref))
+            windows.append((start, end, activity_ref, participant_ref))
 
         # Overlap
         if overlap > 0:
@@ -274,7 +215,7 @@ def _zscore_normalization(features, eps=1e-12):
     return features
 
 
-def extract_features(data, variables_modules, fs, window_duration=5.0, overlap_ratio=0.5):
+def extract_features(data, variables_modules, window_duration=5.0, overlap_ratio=0.5):
     """Extract features per window for acceleration, gyroscope and magnetometer.
 
     The function windowizes the `data` using `sliding_windows` and
@@ -314,7 +255,7 @@ def extract_features(data, variables_modules, fs, window_duration=5.0, overlap_r
                     [f"gyro_{name}" for name in base_feature_names] + \
                     [f"mag_{name}" for name in base_feature_names]
 
-    windows = _sliding_windows(data, fs, window_duration, overlap_ratio)
+    windows = _sliding_windows(data, window_duration, overlap_ratio)
 
     features = []
     labels = []
@@ -323,7 +264,7 @@ def extract_features(data, variables_modules, fs, window_duration=5.0, overlap_r
     gyroscope_modules = variables_modules[1][1]
     magnetic_modules = variables_modules[2][1]
 
-    for (start_idx, end_idx, activity_label, device_id, participant) in windows:
+    for (start_idx, end_idx, activity_label, participant) in windows:
         acc_window = acceleration_modules[start_idx:end_idx]
         gyro_window = gyroscope_modules[start_idx:end_idx]
         mag_window = magnetic_modules[start_idx:end_idx]
@@ -341,9 +282,10 @@ def extract_features(data, variables_modules, fs, window_duration=5.0, overlap_r
         labels.append((activity_label, participant))
         features.append(combined_features)
 
-    features = np.array(features, dtype=float)
-    labels = np.array(labels, dtype=int) 
+    features = np.array(features)
+    labels = np.array(labels)
 
+    # Z-score normalization
     features = _zscore_normalization(features)
 
     return features, labels, feature_names

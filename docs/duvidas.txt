@@ -1,2 +1,8 @@
 1. O smote tambem deve ter em conta o numero de samples dos participantes? 
    Para nao ficar um participante com todos os samples criados.
+
+2. A normalizacao quando tem de acontecer?
+
+3. Nao adicionar augmented data ao dataset para nao desemparelhar
+
+4. Descartar activities
