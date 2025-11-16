@@ -314,7 +314,7 @@ def extract_features(data, variables_modules, fs, window_duration=5.0, overlap_r
                     [f"gyro_{name}" for name in base_feature_names] + \
                     [f"mag_{name}" for name in base_feature_names]
 
-    windows = _sliding_windows_timestamp(data, fs, window_duration, overlap_ratio)
+    windows = _sliding_windows(data, fs, window_duration, overlap_ratio)
 
     features = []
     labels = []

@@ -71,11 +71,11 @@ def partB ():
 
     # --- Exercise 1.2: Data Augmentation with SMOTE ---
 
-    features, pca, labels, synthetic_rows = augment_activity_data(features, pca, labels)
+    features, pca, labels, synthetic_indices = augment_activity_data(features, pca, labels)
 
     # --- Exercise 1.3: Visualize Synthetic vs Real Samples ---
 
-    plot_synthetic_vs_real(features, labels, synthetic_rows)
+    plot_synthetic_vs_real(features, labels, scores, synthetic_indices)
 
 if __name__ == "__main__":
 

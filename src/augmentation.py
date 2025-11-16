@@ -20,6 +20,7 @@ import numpy as np
 import matplotlib.pyplot as plt
 from imblearn.over_sampling import SMOTE
 from sklearn.decomposition import PCA
+from sklearn.neighbors import NearestNeighbors
 
 # --- Pre Game ---
 
@@ -122,76 +123,81 @@ def analyze_activity_balance(labels):
 	label_count = dict(zip(unique, counts))
 	return label_count
 
+def augment_activity_data(features, pca, labels, activity=4, participant=3, n_samples=3, ):
+    """
+    Generate synthetic samples for a specific activity using SMOTE and project them into PCA space.
 
-def augment_activity_data(features, pca, labels, n_samples=3, activity=4, participant=3):
-	"""Augment the dataset by generating synthetic samples for a specific activity and participant using SMOTE.
+    Parameters
+    ----------
+    features : np.ndarray
+        Original feature matrix (n_samples, n_features)
+    pca : np.ndarray
+        Original PCA-transformed matrix (n_samples, n_components)
+    labels : np.ndarray
+        Label matrix where column 0: activity, column 1: participant
+    activity : int
+        Activity class to augment
+    participant : int
+        Participant ID for synthetic samples
+    n_samples : int
+        Number of synthetic samples to generate
+    k_neighbors : int
+        Number of neighbors for interpolation
 
-	Parameters
-	----------
-	features : matrix, shape (n_samples, n_features)
-		Feature matrix of shape (n_samples, n_features) for all samples.
-	pca : matrix, shape (n_samples, n_components)
-		PCA-transformed matrix of shape (n_samples, n_components) for all samples.
-	labels : matrix, shape (n_samples, 2)
-		Array of shape (n_samples, 2), where each row contains [activity, participant] for each sample.
-	n_samples : int, optional
-		Number of synthetic samples to generate (default is 3).
-	activity : int, optional
-		Activity label to augment (default is 4).
-	participant : int, optional
-		Participant ID to augment (default is 3).
-
-	Returns
-	-------
-	features_augmented : matrix, shape (n_samples + n_synthetic, n_features)
-		Feature matrix with synthetic samples appended.
-	pca_augmented : matrix, shape (n_samples + n_synthetic, n_components)
-		PCA matrix with synthetic samples appended.
-	labels_augmented : matrix, shape (n_samples + n_synthetic, 2)
-		Label array with synthetic labels appended.
-	new_rows : np.ndarray
-		Array of row indices (in the augmented arrays) corresponding to the new synthetic samples."""
-
-	print("\n--- Augmenting dataset with SMOTE ---\n")
-
-	test=False
-	if test:
-		n_samples= int(input("Number of samples: "))
-		activity= int(input("Activity to augment: "))
-		participant= int(input("Participant to augment: "))
-
-	# Filter for the chosen activity
-	mask = (labels[:, 0] == activity)
-	activity_features = features[mask]
+    Returns
+    -------
+    features_augmented : np.ndarray
+        Augmented feature matrix
+    pca_augmented : np.ndarray
+        Augmented PCA matrix
+    labels_augmented : np.ndarray
+        Augmented labels
+    synthetic_indices : np.ndarray
+        Indices of synthetic samples in the augmented matrices"""
 	
-	# Create a dummy target for SMOTE (must have at least 2 samples)
-	dummy = np.array([0] * (activity_features.shape[0] - 1) + [1])
-	smote = SMOTE(sampling_strategy={0: activity_features.shape[0], 1: activity_features.shape[0] + n_samples}, k_neighbors=min(5, activity_features.shape[0]-1))
-	new_activity_features, new_dummy = smote.fit_resample(activity_features, dummy)
+    # Filter samples for the target activity
+    mask = labels[:, 0] == activity
+    activity_features = features[mask]
 
-	# Only keep the synthetic samples (those with class 1 and index >= activity_features.shape[0])
-	synthetic_mask = (new_dummy == 1)[activity_features.shape[0]:]
-	synthetic_features = new_activity_features[activity_features.shape[0]:][synthetic_mask]
-	
-	# Create synthetic labels
-	synthetic_labels = np.tile([activity, participant], (synthetic_features.shape[0], 1))
+    # Adjust k_neighbors if too few samples
+    k_neighbors = min(5, activity_features.shape[0] - 1)
 
-	# Project synthetic features into PCA space
-	pca_model = PCA(n_components=pca.shape[1])
-	pca_model.fit(features)
-	synthetic_pca = pca_model.transform(synthetic_features)
+    # Fit nearest neighbors model
+    nearest_neighbors = NearestNeighbors(n_neighbors=k_neighbors + 1).fit(activity_features).kneighbors(return_distance=False)
 
-	# Concatenate synthetic samples to original data
-	features_augmented = np.vstack([features, synthetic_features])
-	pca_augmented = np.vstack([pca, synthetic_pca])
-	labels_augmented = np.vstack([labels, synthetic_labels])
+    # Generate synthetic samples
+    synthetic_features = []
+    for _ in range(n_samples):
+        idx = np.random.randint(0, len(activity_features))
+        base = activity_features[idx]
+        nn_idx = np.random.choice(nearest_neighbors[idx][1:])
+        neighbor = activity_features[nn_idx]
 
-	# Indices of new synthetic samples in the augmented arrays
-	synthetic_rows = np.arange(features.shape[0], features_augmented.shape[0])
+        delta = np.random.rand()
+        synthetic_sample = base + delta * (neighbor - base)
+        synthetic_features.append(synthetic_sample)
 
-	return features_augmented, pca_augmented, labels_augmented, synthetic_rows
+    synthetic_features = np.array(synthetic_features)
 
-def plot_synthetic_vs_real(features, labels, scores, synthetic_rows):
+    # Project synthetic samples into PCA space
+    pca_model = PCA(n_components=pca.shape[1])
+    pca_model.fit(features)  
+    synthetic_pca = pca_model.transform(synthetic_features)
+
+    # Create synthetic labels
+    synthetic_labels = np.tile([activity, participant], (n_samples, 1))
+
+    # Append to original data
+    features_augmented = np.vstack([features, synthetic_features])
+    pca_augmented = np.vstack([pca, synthetic_pca])
+    labels_augmented = np.vstack([labels, synthetic_labels])
+
+    # Compute indices of synthetic samples
+    synthetic_indices = np.arange(features.shape[0], features_augmented.shape[0])
+
+    return features_augmented, pca_augmented, labels_augmented, synthetic_indices
+
+def plot_synthetic_vs_real(features, labels, scores, synthetic_indices, activity=4, participant=3):
 	"""Visualize real and synthetic samples using a 2D scatter plot of the first two features.
 
 	Parameters
@@ -200,23 +206,36 @@ def plot_synthetic_vs_real(features, labels, scores, synthetic_rows):
 		Feature matrix of shape (n_samples, n_features) for all samples.
 	labels : matrix, shape (n_samples, 2)
 		Array of shape (n_samples, 2), where each row contains [activity, participant] for each sample.
-	synthetic_rows : array
-		Array of row indices corresponding to synthetic samples in the features/labels arrays."""
+	synthetic_indices : array
+		Array of row indices corresponding to synthetic samples in the features/labels arrays.
+	activity : int
+		The activity ID to plot.
+	participant : int
+		The participant ID to plot.
+	"""
 	
 	plt.figure(figsize=(8, 6))
 
-	# Plot real samples by activity (excluding synthetic)
+	# Create a mask for all real samples 
 	real_mask = np.ones(features.shape[0], dtype=bool)
-	real_mask[synthetic_rows] = False
-	for act in np.unique(labels[real_mask, 0]):
-		mask = (labels[:, 0] == act) & real_mask
-		plt.scatter(features[mask, 0], features[mask, 1], label=f"Activity {act}", alpha=0.6)
+	if synthetic_indices.size > 0:
+		real_mask[synthetic_indices] = False
 
-	# Plot synthetic samples on top, with black edge
-	plt.scatter(features[synthetic_rows, 0], features[synthetic_rows, 1], c='red', marker='*', s=200, edgecolor='black', linewidths=1.5, label='Synthetic', zorder=10)
+	# Create a mask for the specific activity and participant
+	classes_mask = (labels[:, 0] == activity) & (labels[:, 1] == participant)
+	
+	# Combine the masks to get only the real samples for the selected classes
+	full_mask = real_mask & classes_mask
+
+	# Plot the real samples for the selected activity and participant
+	plt.scatter(features[full_mask, 0], features[full_mask, 1], label="Real", alpha=0.6)
+
+	# Plot synthetic samples on top
+	plt.scatter(features[synthetic_indices, 0], features[synthetic_indices, 1], c='red', marker='o', label='Synthetic')
+	
 	plt.xlabel(scores[0][0])
 	plt.ylabel('Feature 2')
-	plt.title('Synthetic vs Real Samples (First 2 Features)')
+	plt.title(f'Activity {activity}, Participant {participant}: Synthetic vs Real Samples')
 	plt.legend()
 	plt.tight_layout()
 	plt.show()
