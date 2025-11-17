@@ -25,24 +25,19 @@ from sklearn.neighbors import NearestNeighbors
 # --- Pre Game ---
 
 def reload_data():
-	"""Load or recompute cached feature artifacts.
-
-	Attempts to load precomputed numpy artifacts from the `data/` folder:
-	`features.npy`, `pca.npy`, `names.npy`, and `labels.npy`. If all files
-	are present they are loaded and returned. If a FileNotFoundError occurs
-	(the cache is missing or incomplete) the function recomputes features by
-	loading the raw dataset, computing module signals, extracting
-	windowed features, running PCA and computing feature rankings. The
-	computed matrixes are saved to disk for future runs.
+	"""
+	Load or recompute cached feature artifacts from the `data/` folder.
+	Loads precomputed numpy arrays if available; otherwise, recomputes features from raw data and saves them.
 
 	Returns
 	-------
-	features : matrix, shape (n_windows, n_features)
+	data : np.ndarray
+		Raw dataset matrix.
+	features : np.ndarray, shape (n_windows, n_features)
 		Feature matrix.
-	pca : matrix, shape (n_windows, n_components)
-		PCA-transformed data.
-	labels : matrix, shape (n_windows, 2)
-		Integer array where column 0 is activity and column 1 is participant id."""
+	labels : np.ndarray, shape (n_windows, 2)
+		Integer array: column 0 is activity, column 1 is participant ID.
+	"""
 	
 	try:
 		data = np.load("data/data.npy", allow_pickle=True)
@@ -62,21 +57,25 @@ def reload_data():
 	return data, features, labels
 
 def discard_activities(features=None, pca=None, labels=None, embeddings=None):
-	"""Discard samples whose activity label is greater than 7.
+	"""
+	Discard samples whose activity label is greater than 7.
 
 	Parameters
 	----------
-	features : matrix, shape (n_samples, n_features)
-		Feature matrix where rows correspond to samples.
-	pca : matrix, shape (n_samples, n_components)
-		PCA-transformed representation aligned with `features` (same row order).
-	labels : matrix, shape (n_samples, 2)
-		Integer array where column 0 is activity id and column 1 is participant id.
+	features : np.ndarray, optional
+		Feature matrix (n_samples, n_features).
+	pca : np.ndarray, optional
+		PCA-transformed matrix (n_samples, n_components).
+	labels : np.ndarray, optional
+		Integer array (n_samples, 2): column 0 is activity, column 1 is participant ID.
+	embeddings : np.ndarray, optional
+		Embeddings matrix (n_samples, n_embedding_features).
 
 	Returns
 	-------
-	features, pca, labels : tuple of matrixes
-		Filtered arrays containing only the rows for which activity <= 7."""
+	tuple
+		Filtered arrays containing only rows for which activity <= 7.
+	"""
 	
 	if features is not None and labels is not None:
 		mask = labels[:, 0] <= 7
@@ -91,17 +90,19 @@ def discard_activities(features=None, pca=None, labels=None, embeddings=None):
 # --- Exercise 1.1: Data Augmentation with SMOTE ---
 
 def analyze_activity_balance(labels):
-	"""Analyze the balance of activity samples in the dataset.
+	"""
+	Analyze the balance of activity samples in the dataset and print sample counts per activity.
 
 	Parameters
 	----------
-	labels : matrix, shape (n_samples, 2)
-		Array of shape (n_samples, 2), where each row contains [activity, participant].
+	labels : np.ndarray, shape (n_samples, 2)
+		Array where each row contains [activity, participant].
 
 	Returns
 	-------
-	label_count: dictionary
-		Dictionary mapping activity label to number of samples."""
+	None
+		Prints activity sample counts to stdout.
+	"""
 
 	# Count samples per activity
 	activities = labels[:, 0]
@@ -112,75 +113,75 @@ def analyze_activity_balance(labels):
 		print(f"Activity {activity}: {count} samples")
 
 def augment_activity_data(features, labels, activity=4, participant=3, n_samples=3, ):
-    """Generate synthetic samples for a specific activity using SMOTE and project them into PCA space.
-
-    Parameters
-    ----------
-    features : np.ndarray
-        Original feature matrix (n_samples, n_features)
-    labels : np.ndarray
-        Label matrix where column 0: activity, column 1: participant
-    activity : int
-        Activity class to augment
-    participant : int
-        Participant ID for synthetic samples
-    n_samples : int
-        Number of synthetic samples to generate
-    k_neighbors : int
-        Number of neighbors for interpolation
-
-    Returns
-    -------
-    features_augmented : np.ndarray
-        Augmented feature matrix
-    pca_augmented : np.ndarray
-        Augmented PCA matrix
-    labels_augmented : np.ndarray
-        Augmented labels
-    synthetic_indices : np.ndarray
-        Indices of synthetic samples in the augmented matrices"""
-	
-    # Filter samples for the target activity
-    mask = labels[:, 0] == activity
-    activity_features = features[mask]
-
-    # Adjust k_neighbors if too few samples
-    k_neighbors = min(5, activity_features.shape[0] - 1)
-
-    # Fit nearest neighbors model
-    nearest_neighbors = NearestNeighbors(n_neighbors=k_neighbors + 1).fit(activity_features).kneighbors(return_distance=False)
-
-    # Generate synthetic samples
-    synthetic_features = []
-    for _ in range(n_samples):
-        idx = np.random.randint(0, len(activity_features))
-        base = activity_features[idx]
-        nn_idx = np.random.choice(nearest_neighbors[idx][1:])
-        neighbor = activity_features[nn_idx]
-
-        delta = np.random.rand()
-        synthetic_sample = base + delta * (neighbor - base)
-        synthetic_features.append(synthetic_sample)
-
-    synthetic_features = np.array(synthetic_features)
-
-    return synthetic_features
-
-def plot_synthetic_vs_real(features, labels, synthetic_features, activity=4, participant=3):
-	"""Visualize real and synthetic samples using a 2D scatter plot of the first two features.
+	"""
+	Generate synthetic samples for a specific activity using SMOTE-like interpolation.
 
 	Parameters
 	----------
-	features : matrix, shape (n_samples, n_features)
-		Feature matrix of shape (n_samples, n_features) for all real samples.
-	labels : matrix, shape (n_samples, 2)
-		Array of shape (n_samples, 2) for all real samples.
-	synthetic_features : matrix, shape (n_synthetic, n_features)
-		Feature matrix for the synthetic samples.
-	activity : int
-		The activity ID to plot.
-	participant : int
-		The participant ID to plot.
+	features : np.ndarray
+		Original feature matrix (n_samples, n_features).
+	labels : np.ndarray
+		Label matrix (n_samples, 2): column 0 is activity, column 1 is participant.
+	activity : int, optional
+		Activity class to augment (default=4).
+	participant : int, optional
+		Participant ID for synthetic samples (default=3).
+	n_samples : int, optional
+		Number of synthetic samples to generate (default=3).
+
+	Returns
+	-------
+	synthetic_features : np.ndarray
+		Generated synthetic feature matrix (n_samples, n_features).
+	"""
+	
+	# Filter samples for the target activity
+	mask = labels[:, 0] == activity
+	activity_features = features[mask]
+
+	# Adjust k_neighbors if too few samples
+	k_neighbors = min(5, activity_features.shape[0] - 1)
+
+	# Fit nearest neighbors model
+	nearest_neighbors = NearestNeighbors(n_neighbors=k_neighbors + 1).fit(activity_features).kneighbors(return_distance=False)
+
+	# Generate synthetic samples
+	synthetic_features = []
+	for _ in range(n_samples):
+		idx = np.random.randint(0, len(activity_features))
+		base = activity_features[idx]
+		nn_idx = np.random.choice(nearest_neighbors[idx][1:])
+		neighbor = activity_features[nn_idx]
+
+		delta = np.random.rand()
+		synthetic_sample = base + delta * (neighbor - base)
+		synthetic_features.append(synthetic_sample)
+
+	synthetic_features = np.array(synthetic_features)
+
+	return synthetic_features
+
+def plot_synthetic_vs_real(features, labels, synthetic_features, activity=4, participant=3):
+	"""
+	Visualize real and synthetic samples using a 2D scatter plot of the first two features.
+
+	Parameters
+	----------
+	features : np.ndarray
+		Feature matrix for all real samples (n_samples, n_features).
+	labels : np.ndarray
+		Array for all real samples (n_samples, 2).
+	synthetic_features : np.ndarray
+		Feature matrix for synthetic samples (n_synthetic, n_features).
+	activity : int, optional
+		Activity ID to plot (default=4).
+	participant : int, optional
+		Participant ID to plot (default=3).
+
+	Returns
+	-------
+	None
+		Displays a scatter plot of real and synthetic samples.
 	"""
 	
 	plt.figure(figsize=(8, 6))

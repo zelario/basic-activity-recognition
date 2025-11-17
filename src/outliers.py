@@ -45,17 +45,19 @@ ACTIVITY_NAMES = [
 
 
 def compute_modules(data):
-    """Compute vector modules for acceleration, gyroscope, and magnetometer.
+    """
+    Compute vector magnitudes (modules) for acceleration, gyroscope, and magnetometer.
 
     Parameters
     ----------
-    data : matrix, shape (n_samples, 13)
+    data : np.ndarray, shape (n_samples, 13)
         Raw dataset matrix. Columns 1:4, 4:7, 7:10 are x/y/z for Acc, Gyro, Mag.
 
     Returns
     -------
-    variables_modules : list of (str, array)
-        List of (name, modules) for Acc, Gyro, Mag vector magnitudes."""
+    variables_modules : list of (str, np.ndarray)
+        List of (name, modules) for Acc, Gyro, Mag vector magnitudes.
+    """
     
     acc_modules = np.linalg.norm(data[:, 1:4], axis=1)
     gyro_modules = np.linalg.norm(data[:, 4:7], axis=1)
@@ -70,14 +72,16 @@ def compute_modules(data):
     return variables_modules
 
 def boxplot_modules(data, variables_modules):
-    """Plot boxplots of variable modules for each activity and selected device.
+    """
+    Plot boxplots of variable modules for each activity and selected device.
 
     Parameters
     ----------
-    data : matrix, shape (n_samples, 13)
+    data : np.ndarray, shape (n_samples, 13)
         Raw dataset matrix.
-    variables_modules : list of (str, array)
-        List of (name, modules) for Acc, Gyro, Mag vector magnitudes."""
+    variables_modules : list of (str, np.ndarray)
+        List of (name, modules) for Acc, Gyro, Mag vector magnitudes.
+    """
     
     print("\n--- Boxplots of Variable Modules ---")
     device_choice = int(input("\nPick a device (1-5): "))
@@ -110,14 +114,16 @@ def boxplot_modules(data, variables_modules):
 # --- Exercise 3.2: Outlier Densities via IQR ---
 
 def outlier_density_iqr(data, variables_modules):
-    """Compute outlier densities per activity using IQR method (right wrist only).
+    """
+    Compute outlier densities per activity using IQR method (right wrist only).
 
     Parameters
     ----------
-    data : matrix, shape (n_samples, 13)
+    data : np.ndarray, shape (n_samples, 13)
         Raw dataset matrix.
-    variables_modules : list of (str, array)
-        List of (name, modules) for Acc, Gyro, Mag vector magnitudes."""
+    variables_modules : list of (str, np.ndarray)
+        List of (name, modules) for Acc, Gyro, Mag vector magnitudes.
+    """
     
     for variable_name, variable_modules in variables_modules:
         print(f"\n--- {variable_name} Outlier Densities via IQR ---\n")
@@ -142,16 +148,18 @@ def outlier_density_iqr(data, variables_modules):
 # --- Exercise 3.3 and 3.4: Outlier Detection via Z-Score ---
 
 def outlier_density_z_score(data, variables_modules, k):
-    """Compute outlier densities per activity using z-score method (right wrist only).
+    """
+    Compute outlier densities per activity using z-score method (right wrist only).
 
     Parameters
     ----------
-    data : matrix, shape (n_samples, 13)
+    data : np.ndarray, shape (n_samples, 13)
         Raw dataset matrix.
-    variables_modules : list of (str, array)
+    variables_modules : list of (str, np.ndarray)
         List of (name, modules) for Acc, Gyro, Mag vector magnitudes.
     k : float
-        Z-score threshold for outlier detection."""
+        Z-score threshold for outlier detection.
+    """
     
     print("\n--- Outlier Detection via Z-Score ---")
 
@@ -183,13 +191,14 @@ def outlier_density_z_score(data, variables_modules, k):
             print(f"Activity {activity}: {density:.2f}% ({outlier_count}/{n})")
 
 def _z_score(data, var_modules, activity, k):
-    """Return indices of outliers in a variable module for a given activity using z-score.
+    """
+    Return indices of outliers in a variable module for a given activity using z-score.
 
     Parameters
     ----------
-    data : matrix, shape (n_samples, 13)
+    data : np.ndarray, shape (n_samples, 13)
         Raw dataset matrix.
-    var_modules : array
+    var_modules : np.ndarray
         Variable module values (Acc, Gyro, Mag).
     activity : int
         Activity id to filter.
@@ -198,8 +207,9 @@ def _z_score(data, var_modules, activity, k):
 
     Returns
     -------
-    outlier_idxs : array
-        Indices of outlier samples in the filtered activity."""
+    outlier_idxs : np.ndarray
+        Indices of outlier samples in the filtered activity.
+    """
     
     activity_mask = data[:, 11] == activity
     activity_data = var_modules[activity_mask]
@@ -210,16 +220,18 @@ def _z_score(data, var_modules, activity, k):
     return outlier_idxs
 
 def plot_zscore_outliers(data, variables_modules, k):
-    """Plot z-score outliers for a selected activity for each variable module.
+    """
+    Plot z-score outliers for a selected activity for each variable module.
 
     Parameters
     ----------
-    data : matrix, shape (n_samples, 13)
+    data : np.ndarray, shape (n_samples, 13)
         Raw dataset matrix.
-    variables_modules : list of (str, array)
+    variables_modules : list of (str, np.ndarray)
         List of (name, modules) for Acc, Gyro, Mag vector magnitudes.
     k : float
-        Z-score threshold for outlier detection."""
+        Z-score threshold for outlier detection.
+    """
     
     print("\n--- Z-Score Outlier Visualization ---\n")
     activity_id = int(input("Pick an activity to highlight outliers (1-16): "))
@@ -241,14 +253,16 @@ def plot_zscore_outliers(data, variables_modules, k):
 # --- Exercise 3.6 and 3.7: Clustering ---
 
 def kmeans(variables_modules, n_clusters):
-    """Run KMeans clustering for each variable module and print cluster centers/counts.
+    """
+    Run KMeans clustering for each variable module and print cluster centers/counts.
 
     Parameters
     ----------
-    variables_modules : list of (str, array)
+    variables_modules : list of (str, np.ndarray)
         List of (name, modules) for Acc, Gyro, Mag vector magnitudes.
     n_clusters : int
-        Number of clusters to use for KMeans."""
+        Number of clusters to use for KMeans.
+    """
     
     n_clusters = int(input("\n--- K-Means Clustering ---\n\nChoose the number of clusters: (e.g., 2, 3, 4): "))
 
@@ -265,16 +279,18 @@ def kmeans(variables_modules, n_clusters):
             print(f"Cluster {i}: center = {centers[i][0]:.3f}, samples = {count}")
 
 def plot_kmeans_clusters(data, variables_modules, n_clusters=3):
-    """Plot KMeans clusters and highlight IQR outliers in 3D feature space for selected activity/device.
+    """
+    Plot KMeans clusters and highlight IQR outliers in 3D feature space for selected activity/device.
 
     Parameters
     ----------
-    data : matrix, shape (n_samples, 13)
+    data : np.ndarray, shape (n_samples, 13)
         Raw dataset matrix.
-    variables_modules : list of (str, array)
+    variables_modules : list of (str, np.ndarray)
         List of (name, modules) for Acc, Gyro, Mag vector magnitudes.
     n_clusters : int, optional
-        Number of clusters for KMeans (default 3)."""
+        Number of clusters for KMeans (default=3).
+    """
     
     activity_choice = int(input("\nPick an activity to highlight outliers (1-16): "))
     device_choice = int(input("Pick a device to highlight outliers (1-5): "))
@@ -335,18 +351,20 @@ def plot_kmeans_clusters(data, variables_modules, n_clusters=3):
 
 
 def plot_dbscan_clusters(data, variables_modules, eps=0.5, min_samples=5):
-    """Plot DBSCAN clusters and highlight outliers in 3D feature space for selected activity/device.
+    """
+    Plot DBSCAN clusters and highlight outliers in 3D feature space for selected activity/device.
 
     Parameters
     ----------
-    data : matrix, shape (n_samples, 13)
+    data : np.ndarray, shape (n_samples, 13)
         Raw dataset matrix.
-    variables_modules : list of (str, array)
+    variables_modules : list of (str, np.ndarray)
         List of (name, modules) for Acc, Gyro, Mag vector magnitudes.
     eps : float, optional
-        DBSCAN epsilon parameter (default 0.5).
+        DBSCAN epsilon parameter (default=0.5).
     min_samples : int, optional
-        DBSCAN min_samples parameter (default 5)."""
+        DBSCAN min_samples parameter (default=5).
+    """
     
     print(f"\n--- DBSCAN Clustering ---")
 

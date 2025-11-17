@@ -34,24 +34,21 @@ FEATURES_NAMES = [
 # --- Exercise 4.1: Statistical Tests ---
 
 def normality_and_significance(data, variables_modules, alpha=0.05):
-    """Run normality checks per activity and a group-level significance test.
+    """
+    Run normality checks per activity and perform a group-level significance test.
 
-    For each variable provided in `variables_modules` the function splits the
-    variable modules by activity (using column 11 of `data`) and performs a
-    Kolmogorov-Smirnov test for normality on z-scored samples of each
-    activity. If all activity groups pass the normality test (p > `alpha`),
-    a one-way ANOVA is used to test for differences between activities; 
-    otherwise the non-parametric Kruskal-Wallis test is used.
+    For each variable in `variables_modules`, splits by activity and performs Kolmogorov-Smirnov normality test on z-scored samples.
+    If all groups pass normality, uses one-way ANOVA; otherwise, uses Kruskal-Wallis test.
 
     Parameters
     ----------
-    data : matrix, shape (n_samples, 13)
-        Raw dataset matrix. Column 11 must contain the activity id for each sample.
-    variables_modules : iterable of (str, array)
-        Iterable of pairs (name, modules) where `modules` is a 1-D array of
-        values aligned with `data` rows representing the variable to test.
-    alpha : float
-        Significance threshold for tests (default 0.05)."""
+    data : np.ndarray, shape (n_samples, 13)
+        Raw dataset matrix. Column 11 must contain activity id.
+    variables_modules : iterable of (str, np.ndarray)
+        Iterable of (name, modules) pairs, modules aligned with data rows.
+    alpha : float, optional
+        Significance threshold (default=0.05).
+    """
 
     print("--- Normality and Significance Tests ---")
     for name, modules in variables_modules:
@@ -94,25 +91,23 @@ def normality_and_significance(data, variables_modules, alpha=0.05):
             print("Result: No significant differences between activities")
 
 def _sliding_windows(data, window_duration=5.0, overlap=0.5):
-    """Create sliding windows using timestamps and enforce label/device/participant continuity.
-
-    The function uses the timestamp column to limit window duration. 
-    It also ensures all samples in a window share the same activity 
-    label (col 11), device id (col 0) and participant id (col 12).
+    """
+    Create sliding windows using timestamps, enforcing label/device/participant continuity.
 
     Parameters
     ----------
-    data : matrix, shape (n_samples, 13)
+    data : np.ndarray, shape (n_samples, 13)
         Raw data matrix with timestamp and label columns.
-    window_duration : float
-        Window length in seconds.
-    overlap : float
-        Fractional overlap between consecutive windows.
+    window_duration : float, optional
+        Window length in seconds (default=5.0).
+    overlap : float, optional
+        Fractional overlap between consecutive windows (default=0.5).
 
     Returns
     -------
     windows : list of tuples
-        Each tuple is (start_idx, end_idx, activity_id, device_id, participant_id)."""
+        Each tuple is (start_idx, end_idx, activity_id, participant_id).
+    """
 
     activity_ids = np.asarray(data[:, 11]).astype(int)
     device_ids = np.asarray(data[:, 0]).astype(int)
@@ -150,22 +145,21 @@ def _sliding_windows(data, window_duration=5.0, overlap=0.5):
     return windows
 
 def _extract_window_features(signal):
-    """Compute time-domain and simple spectral features for a 1-D signal.
+    """
+    Compute time-domain and simple spectral features for a 1-D signal window.
 
-    The returned features (in order) are:
-    mean, std (sample), median, variance (sample), rms, average_deviation,
-    skewness, kurtosis (excess), iqr, zero_crossing_rate, mean_crossing_rate,
-    spectral_entropy.
+    Features (in order): mean, std, median, variance, rms, average deviation, skewness, kurtosis, IQR, zero crossing rate, mean crossing rate, spectral entropy.
 
     Parameters
     ----------
-    signal : array
-        1-D numeric vector containing signal samples for a single window.
+    signal : np.ndarray
+        1-D numeric vector of signal samples for a single window.
 
     Returns
     -------
     feature_values : list of float
-        A list of 12 numerical features extracted from `signal`."""
+        List of 12 features extracted from signal.
+    """
 
     mean_value = np.mean(signal)
 
@@ -202,19 +196,21 @@ def _extract_window_features(signal):
 
 
 def zscore_normalization(features, eps=1e-12):
-    """Column-wise z-score normalization.
+    """
+    Column-wise z-score normalization of feature matrix.
 
     Parameters
     ----------
-    features : matrix, shape (n_samples, n_features)
+    features : np.ndarray, shape (n_samples, n_features)
         Numeric feature matrix.
-    eps : float
-        Small threshold to detect near-zero standard deviations.
+    eps : float, optional
+        Threshold for near-zero std deviation (default=1e-12).
 
     Returns
     -------
-    features : matrix, shape (n_samples, n_features)
-        Z-score normalized feature matrix (float)."""
+    features : np.ndarray, shape (n_samples, n_features)
+        Z-score normalized feature matrix.
+    """
 
     features = features.astype(float, copy=True)
     mean_values = np.nanmean(features, axis=0)
@@ -225,32 +221,27 @@ def zscore_normalization(features, eps=1e-12):
 
 
 def extract_features(data, variables_modules, window_duration=5.0, overlap_ratio=0.5):
-    """Extract features per window for acceleration, gyroscope and magnetometer.
-
-    The function windowizes the `data` using `sliding_windows` and
-    computes the same set of features for the module signals of the
-    three variables.
+    """
+    Extract features per window for acceleration, gyroscope, and magnetometer modules.
 
     Parameters
     ----------
-    data : matrix, shape (n_samples, 13)
-        Raw dataset aligned with the variable arrays (timestamps & labels).
-    variables_modules : iterable of (str, array)
-        Iterable of pairs (name, modules) where `modules` is a 1-D array of
-        values aligned with `data` rows representing the variable to test.
-    fs : float
-        Sampling frequency in Hz.
-    window_duration : float
-        Window duration in seconds.
-    overlap_ratio : float
-        Fractional overlap between windows.
+    data : np.ndarray, shape (n_samples, 13)
+        Raw dataset aligned with variable arrays (timestamps & labels).
+    variables_modules : iterable of (str, np.ndarray)
+        Iterable of (name, modules) pairs, modules aligned with data rows.
+    window_duration : float, optional
+        Window duration in seconds (default=5.0).
+    overlap_ratio : float, optional
+        Fractional overlap between windows (default=0.5).
 
     Returns
     -------
-    features : matrix, shape (n_windows, n_features)
-        Z-score normalized feature matrix with one row per valid window.
-    labels : matrix, shape (n_windows, 2)
-        Integer matrix with (activity_label, participant_id) for each window."""
+    features : np.ndarray, shape (n_windows, n_features)
+        Z-score normalized feature matrix, one row per valid window.
+    labels : np.ndarray, shape (n_windows, 2)
+        Integer matrix: (activity_label, participant_id) for each window.
+    """
 
     windows = _sliding_windows(data, window_duration, overlap_ratio)
 
@@ -287,21 +278,23 @@ def extract_features(data, variables_modules, window_duration=5.0, overlap_ratio
 # --- Exercise 4.3: PCA ---
 
 def compute_pca(features, n_components=None):
-    """Perform principal component analysis and return projected data.
+    """
+    Perform principal component analysis (PCA) and return projected data and explained variance ratio.
 
     Parameters
     ----------
-    features : matrix, shape (n_samples, n_features)
+    features : np.ndarray, shape (n_samples, n_features)
         Input feature matrix.
-    n_components : int or None
-        Number of principal components to compute. If None, uses `min(features.shape)`.
+    n_components : int or None, optional
+        Number of principal components to compute. If None, uses min(features.shape).
 
     Returns
     -------
-    pca: matrix, shape (n_samples, n_components)
-        The transformed data (scores) of shape (n_samples, n_components).
-    explained_variance_ratio : array 
-        Array containing the variance ratio explained by each component."""
+    pca : np.ndarray, shape (n_samples, n_components)
+        Transformed data (scores) for each sample.
+    explained_variance_ratio : np.ndarray
+        Variance ratio explained by each component.
+    """
 
     n_components = n_components or min(features.shape)
 
@@ -315,12 +308,14 @@ def compute_pca(features, n_components=None):
 # --- Exercise 4.4: PCA Analysis  ---
 
 def analyse_pca(explained_variance_ratio):
-    """Plot the explained variance ratio and cumulative variance from PCA.
+    """
+    Plot explained variance ratio and cumulative variance from PCA.
 
     Parameters
     ----------
-    explained_variance_ratio : array
-        Per-component explained variance ratio as provided by a fitted PCA."""
+    explained_variance_ratio : np.ndarray
+        Per-component explained variance ratio from fitted PCA.
+    """
 
     cumulative = np.cumsum(explained_variance_ratio)
 
@@ -345,22 +340,23 @@ def analyse_pca(explained_variance_ratio):
 # --- Exercise 4.5: Fisher Scores and ReliefF ---
 
 def fisher(features, labels):
-    """Compute Fisher scores for features and return the top-ranked names.
+    """
+    Compute Fisher scores for features and print the top-ranked feature names.
 
-    Fisher score is computed as the ratio of between-class variance to
-    within-class variance for each feature.
+    Fisher score is the ratio of between-class to within-class variance for each feature.
 
     Parameters
     ----------
-    features : matrix, shape (n_samples, n_features)
-        Feature matrix where rows correspond to samples.
-    labels : matrix, shape (n_samples, 2)
-        For activity recognition, the first column is treated as the activity label.
+    features : np.ndarray, shape (n_samples, n_features)
+        Feature matrix.
+    labels : np.ndarray, shape (n_samples, 2)
+        First column is activity label.
 
     Returns
     -------
-    top10 : list of str
-        List with up to 10 feature names sorted by descending Fisher score."""
+    None
+        Prints top 10 feature names and scores.
+    """
 
     labels = np.array(labels)
     n_features = features.shape[1]
@@ -394,31 +390,30 @@ def fisher(features, labels):
 
 
 def relief(features, labels, n_neighbors=50, n_samples=500, top_n=10):
-    """Approximate ReliefF feature ranking using random sampling.
+    """
+    Approximate ReliefF feature ranking using random sampling.
 
-    This is a simplified and efficient approximation of ReliefF. A subset 
-    of `n_samples` examples is chosen and for each chosen instance the 
-    average distance to `n_neighbors` "hits"(same-class) and "misses" 
-    (different-class) is computed. The accumulated difference (miss - hit) 
-    across samples produces a score for each feature: larger positive values 
-    indicate stronger discrimination.
+    For each of n_samples randomly chosen instances, computes average distance to n_neighbors hits (same class) and misses (different class).
+    The difference (miss - hit) is accumulated for each feature; higher scores indicate stronger discrimination.
 
     Parameters
     ----------
-    features : matrix, shape (n_samples, n_features)
+    features : np.ndarray, shape (n_samples, n_features)
         Feature matrix.
-    labels : matrix, shape (n_samples, 2)
-        Class labels as a 1-D array or an (n_samples, 2) array where the first
-        column is the class label.
-    n_neighbors : int
-        Number of neighbours used to estimate hit/miss distances.
-    n_samples : int
-        Number of random samples to draw for the approximation.
+    labels : np.ndarray, shape (n_samples, 2)
+        Class labels; first column is class label.
+    n_neighbors : int, optional
+        Number of neighbors for hit/miss estimation (default=50).
+    n_samples : int, optional
+        Number of random samples to draw (default=500).
+    top_n : int, optional
+        Number of top features to return (default=10).
 
     Returns
     -------
-    top_n : list of str
-        Top n feature names sorted by the approximate ReliefF score."""
+    top_indices : np.ndarray
+        Indices of top n features sorted by ReliefF score.
+    """
     
     n_total = features.shape[0]
     n_features = features.shape[1]

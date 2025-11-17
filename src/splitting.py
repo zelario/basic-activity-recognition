@@ -6,26 +6,26 @@ from features import compute_pca
 # --- Exercise 3.1: Mixed participant splitting ---
 
 def mixed_splitting(features, embeddings, labels):
-    """Splits features and embeddings into training, validation, and test sets
-    while ensuring that the splits are consistent across both representations.
+    """Split features, embeddings, and labels into training, validation, and test sets using mixed participant splitting.
+    Ensures consistent splits across all representations and stratifies by the first label column.
 
     Parameters
     ----------
-    features : matrix, shape (n_windows, n_features)
-        The feature matrix.
-    embeddings : matrix, shape (n_windows, n_embedding_features)
-        The embeddings matrix.
-    labels : matrix, shape (n_windows, n_label_features)
-        The labels array.
+    features : np.ndarray, shape (n_windows, n_features)
+        Feature matrix for all windows.
+    embeddings : np.ndarray, shape (n_windows, n_embedding_features)
+        Embeddings matrix for all windows.
+    labels : np.ndarray, shape (n_windows, n_label_features)
+        Labels array for all windows.
 
     Returns
     -------
-    features_split : tuple of matrixes
-        Training, validation, and test sets for features.
-    embeddings_split : tuple of matrixes
-        Training, validation, and test sets for embeddings.
-    labels_split : tuple of matrixes
-        Training, validation, and test labels."""
+    train_dataset : tuple
+        (features, embeddings, labels) for training set.
+    validation_dataset : tuple
+        (features, embeddings, labels) for validation set.
+    test_dataset : tuple
+        (features, embeddings, labels) for test set."""
 
     # First split: Train+Val and Test
     train_val_features, test_features, train_val_embeddings, test_embeddings, train_val_labels, test_labels = train_test_split(
@@ -47,34 +47,32 @@ def mixed_splitting(features, embeddings, labels):
 # --- Exercise 3.2: Participant-based splitting ---
 
 def participant_splitting(features, embeddings, labels, train_n=9, validation_n=3, test_n=3):
-    """Splits features and embeddings into training, validation, and test sets
-    based on participants to ensure no data leakage between sets.
+    """Split features, embeddings, and labels into training, validation, and test sets by participant groups.
+    Ensures no data leakage between sets by assigning unique participants to each split.
 
     Parameters
     ----------
-    features : matrix, shape (n_windows, n_features)
-        The feature matrix.
-    embeddings : matrix, shape (n_windows, n_embedding_features)
-        The embeddings matrix.
-    labels : matrix, shape (n_windows, n_label_features)
-        The labels array.
-    train_subjects : int
-        Number of subjects for training set.
-    val_subjects : int
-        Number of subjects for validation set.
-    test_subjects : int
-        Number of subjects for test set.
-    random_state : int
-        Random seed for reproducibility.
+    features : np.ndarray, shape (n_windows, n_features)
+        Feature matrix for all windows.
+    embeddings : np.ndarray, shape (n_windows, n_embedding_features)
+        Embeddings matrix for all windows.
+    labels : np.ndarray, shape (n_windows, n_label_features)
+        Labels array for all windows. Assumes participant ID is in column 1.
+    train_n : int, optional
+        Number of participants in training set (default=9).
+    validation_n : int, optional
+        Number of participants in validation set (default=3).
+    test_n : int, optional
+        Number of participants in test set (default=3).
 
     Returns
     -------
-    features_split : tuple of matrixes
-        Training, validation, and test sets for features.
-    embeddings_split : tuple of matrixes
-        Training, validation, and test sets for embeddings.
-    labels_split : tuple of matrixes
-        Training, validation, and test labels."""
+    train_dataset : tuple
+        (features, embeddings, labels) for training set.
+    validation_dataset : tuple
+        (features, embeddings, labels) for validation set.
+    test_dataset : tuple
+        (features, embeddings, labels) for test set."""
 
     random = np.random.default_rng(None)
 
@@ -117,36 +115,45 @@ que o modelo se beneficie de padrões individuais presentes no treino.'''
 # --- Exercise 3.4: Pipeline preparation ---
 
 def prepare_pipeline(train_dataset, validation_dataset, test_dataset):
-    """Prepares three scenarios for the dataset:
-    a) All features/embeddings
-    b) PCA-reduced features (90% variance)
-    c) ReliefF-selected top 15 features
-    All transformations are fit ONLY on the training set and applied to val/test.
-    Returns three lists for train, val, test: each is (scenario_a, scenario_b, scenario_c)"""
+    """Prepare three feature transformation scenarios for train, validation, and test sets:
+      a) All features/embeddings (no transformation)
+      b) PCA-reduced features (retain 90% variance, fit on train only)
+      c) ReliefF-selected top 15 features (fit on train only)
 
-    # Unpack datasets
+    All transformations (PCA, ReliefF) are fit ONLY on the training set and applied to validation and test sets.
+
+    Parameters
+    ----------
+    train_dataset : tuple
+        (features, embeddings, labels) for training set.
+    validation_dataset : tuple
+        (features, embeddings, labels) for validation set.
+    test_dataset : tuple
+        (features, embeddings, labels) for test set.
+
+    Returns
+    -------
+    pipeline : np.ndarray, shape (3, 5)
+        Array containing for each split (train, val, test):
+        [all_features, pca_features, relief_features, embeddings, labels]"""
+
+    # Unpack datasets and set Scenario a: All features/embeddings
     train_features, train_embeddings, train_labels = train_dataset
     validation_features, validation_embeddings, validation_labels = validation_dataset
     test_features, test_embeddings, test_labels = test_dataset
 
     # Scenario b: PCA-reduced features (90% variance)
-    train_pca_scores, explained_variance_ratio = compute_pca(train_features, n_components=None)
+    train_features_pca, explained_variance_ratio = compute_pca(train_features, n_components=None)
     cumulative = np.cumsum(explained_variance_ratio)
     n_components_90 = np.argmax(cumulative >= 0.9) + 1
-    train_features_pca = train_pca_scores[:, :n_components_90]
+    train_features_pca = train_features_pca[:, :n_components_90]
 
-    validation_pca_scores, explained_variance_ratio = compute_pca(validation_features, n_components=n_components_90)
-    cumulative = np.cumsum(explained_variance_ratio)
-    n_components_90 = np.argmax(cumulative >= 0.9) + 1
-    validation_features_pca = validation_pca_scores[:, :n_components_90]
-
-    test_pca_scores, explained_variance_ratio = compute_pca(test_features, n_components=n_components_90)
-    cumulative = np.cumsum(explained_variance_ratio)
-    n_components_90 = np.argmax(cumulative >= 0.9) + 1
-    test_features_pca = test_pca_scores[:, :n_components_90]
+    validation_features_pca, _ = compute_pca(validation_features, n_components=n_components_90)
+    test_features_pca, _ = compute_pca(test_features, n_components=n_components_90)
 
     # Scenario c: ReliefF-selected top 15 features
     top_15_indices = relief(train_features, train_labels, n_features=15)
+
     train_features_relief = train_features[:, top_15_indices]
     validation_features_relief = validation_features[:, top_15_indices]
     test_features_relief = test_features[:, top_15_indices]
@@ -156,9 +163,3 @@ def prepare_pipeline(train_dataset, validation_dataset, test_dataset):
                 [test_features, test_features_pca, test_features_relief, test_embeddings, test_labels]]
     
     return np.array(pipeline)
-
-    
-
-
-
-

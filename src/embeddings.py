@@ -6,25 +6,40 @@ from features import _sliding_windows
 ########################### PROVIDED CODE ###########################
 
 def load_model():
-  ''' Loads the model from the github repo and obtains just the feature encoder. '''
+    """
+    Load the feature extraction model from the OxWearables GitHub repository and return the feature encoder.
 
-  repo = 'OxWearables/ssl-wearables'
-  # class_num não interessa para extrair features; mas o hub pede este arg
-  model = torch.hub.load(repo, 'harnet5', class_num=5, pretrained=True)
-  
-  # Replace the final classification layer with an identity layer to get the embeddings
-  model.fc = torch.nn.Identity()
-  model.eval()
-  model.to("cpu")
-
-  return model
+    Returns
+    -------
+    model : torch.nn.Module
+        The feature encoder model with the final classification layer replaced by identity.
+    """
+    repo = 'OxWearables/ssl-wearables'
+    # class_num não interessa para extrair features; mas o hub pede este arg
+    model = torch.hub.load(repo, 'harnet5', class_num=5, pretrained=True)
+    # Replace the final classification layer with an identity layer to get the embeddings
+    model.fc = torch.nn.Identity()
+    model.eval()
+    model.to("cpu")
+    return model
 
 def resample_to_30hz_5s(acc_xyz, fs_in_hz):
     """
-    acc_xyz: np.ndarray shape (N, 3) em m/s^2 (ou g), amostrado a fs_in_hz (float)
-    devolve:
-      acc_resampled: np.ndarray shape (M, 3) já a 30 Hz
-      fs_target: 30.0
+    Resample raw accelerometer data to 30 Hz over a 5-second window.
+
+    Parameters
+    ----------
+    acc_xyz : np.ndarray, shape (N, 3)
+        Raw accelerometer data (m/s^2 or g), sampled at fs_in_hz.
+    fs_in_hz : float
+        Original sampling frequency of the input data.
+
+    Returns
+    -------
+    acc_resampled : np.ndarray, shape (M, 3)
+        Resampled accelerometer data at 30 Hz for a 5-second window.
+    fs_target : float
+        Target sampling frequency (30.0 Hz).
     """
     fs_target = 30.0
     win_size = 5 # in seconds
@@ -38,30 +53,30 @@ def resample_to_30hz_5s(acc_xyz, fs_in_hz):
     return acc_resampled
 
 def compute_embeddings(data, fs=51.5, window_duration=5.0, overlap_ratio=0.5, batch_size=32):
-    """Computes embeddings for the entire dataset using a sliding window approach.
-
-    This function ensures that the windows used for embeddings are the same as
-    those used for traditional feature extraction, allowing for a direct comparison.
+    """
+    Compute embeddings for the entire dataset using a sliding window approach.
+    Ensures window alignment with traditional feature extraction for direct comparison.
 
     Parameters
     ----------
     data : np.ndarray
-        The raw dataset matrix.
-    fs : float
-        The sampling frequency of the data.
-    window_duration : float
-        The duration of the sliding window in seconds.
-    overlap_ratio : float
-        The fractional overlap between windows.
-    batch_size : int
-        The batch size for processing embeddings.
+        Raw dataset matrix containing sensor data and metadata.
+    fs : float, optional
+        Sampling frequency of the data (default=51.5).
+    window_duration : float, optional
+        Duration of each sliding window in seconds (default=5.0).
+    overlap_ratio : float, optional
+        Fractional overlap between consecutive windows (default=0.5).
+    batch_size : int, optional
+        Batch size for processing embeddings (default=32).
 
     Returns
     -------
-    embeddings : np.ndarray
-        The computed embeddings for each valid window, shape (n_windows, n_embeddings).
-    labels : np.ndarray
-        The labels for each window, shape (n_windows, 2)."""
+    embeddings : np.ndarray, shape (n_windows, n_embeddings)
+        Computed embeddings for each valid window.
+    labels : np.ndarray, shape (n_windows, 2)
+        Labels for each window: [activity, participant].
+    """
     
     try:
       embeddings = np.load("data/embeddings.npy", allow_pickle=True)
