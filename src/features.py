@@ -22,6 +22,15 @@ import matplotlib.pyplot as plt
 from scipy.stats import kstest, f_oneway, kruskal
 from sklearn.decomposition import PCA
 
+FEATURES_NAMES = [
+    "Acceleration Mean", "Acceleration Std", "Acceleration Median", "Acceleration Variance", "Acceleration RMS", "Acceleration Average Deviation", "Acceleration Skewness", 
+    "Acceleration Kurtosis", "Acceleration IQR", "Acceleration Zero Crossing Rate", "Acceleration Mean Crossing Rate", "Acceleration Spectral Entropy",
+    "Gyroscope Mean", "Gyroscope Std", "Gyroscope Median", "Gyroscope Variance", "Gyroscope RMS", "Gyroscope Average Deviation", "Gyroscope Skewness", 
+    "Gyroscope Kurtosis", "Gyroscope IQR", "Gyroscope Zero Crossing Rate", "Gyroscope Mean Crossing Rate", "Gyroscope Spectral Entropy",
+    "Magnetometer Mean", "Magnetometer Std", "Magnetometer Median", "Magnetometer Variance", "Magnetometer RMS", "Magnetometer Average Deviation", "Magnetometer Skewness", 
+    "Magnetometer Kurtosis", "Magnetometer IQR", "Magnetometer Zero Crossing Rate", "Magnetometer Mean Crossing Rate", "Magnetometer Spectral Entropy"
+]
+
 # --- Exercise 4.1: Statistical Tests ---
 
 def normality_and_significance(data, variables_modules, alpha=0.05):
@@ -220,8 +229,7 @@ def extract_features(data, variables_modules, window_duration=5.0, overlap_ratio
 
     The function windowizes the `data` using `sliding_windows` and
     computes the same set of features for the module signals of the
-    three variables. Feature columns are named with prefixes `acc_`,
-    `gyro_`, `mag_` followed by the base feature names.
+    three variables.
 
     Parameters
     ----------
@@ -242,18 +250,7 @@ def extract_features(data, variables_modules, window_duration=5.0, overlap_ratio
     features : matrix, shape (n_windows, n_features)
         Z-score normalized feature matrix with one row per valid window.
     labels : matrix, shape (n_windows, 2)
-        Integer matrix with (activity_label, participant_id) for each window.
-    feature_names : list
-        List of strings naming each column in `features`."""
-
-    base_feature_names = [
-        "mean", "std", "median", "variance", "rms", "average_deviation",
-        "skewness", "kurtosis", "iqr", "zero_crossing_rate", "mean_crossing_rate", "spectral_entropy"
-    ]
-
-    names = [f"acc_{name}" for name in base_feature_names] + \
-                    [f"gyro_{name}" for name in base_feature_names] + \
-                    [f"mag_{name}" for name in base_feature_names]
+        Integer matrix with (activity_label, participant_id) for each window."""
 
     windows = _sliding_windows(data, window_duration, overlap_ratio)
 
@@ -285,7 +282,7 @@ def extract_features(data, variables_modules, window_duration=5.0, overlap_ratio
     features = np.array(features)
     labels = np.array(labels)
 
-    return features, labels, names
+    return features, labels
 
 # --- Exercise 4.3: PCA ---
 
@@ -347,7 +344,7 @@ def analyse_pca(explained_variance_ratio):
 
 # --- Exercise 4.5: Fisher Scores and ReliefF ---
 
-def fisher(features, labels, feature_names):
+def fisher(features, labels):
     """Compute Fisher scores for features and return the top-ranked names.
 
     Fisher score is computed as the ratio of between-class variance to
@@ -359,8 +356,6 @@ def fisher(features, labels, feature_names):
         Feature matrix where rows correspond to samples.
     labels : matrix, shape (n_samples, 2)
         For activity recognition, the first column is treated as the activity label.
-    feature_names : list of str 
-        Names used for pretty printing of top features.
 
     Returns
     -------
@@ -396,14 +391,14 @@ def fisher(features, labels, feature_names):
 
     print("\n========== Fisher Score ==========")
     for i in range(min(10, n_features)):
-        name = feature_names[sorted_idx[i]] if feature_names else f"feature_{sorted_idx[i]}"
+        name = FEATURES_NAMES[sorted_idx[i]] if FEATURES_NAMES else f"feature_{sorted_idx[i]}"
         print(f"{i+1:02d}. {name:>20s}  |  score = {sorted_scores[i]:.4f}")
         top10.append(name)
 
     return top10
 
 
-def relief(features, labels, feature_names, n_neighbors=50, n_samples=500, top_n=10):
+def relief(features, labels, n_neighbors=50, n_samples=500, top_n=10):
     """Approximate ReliefF feature ranking using random sampling.
 
     This is a simplified and efficient approximation of ReliefF. A subset 
@@ -420,8 +415,6 @@ def relief(features, labels, feature_names, n_neighbors=50, n_samples=500, top_n
     labels : matrix, shape (n_samples, 2)
         Class labels as a 1-D array or an (n_samples, 2) array where the first
         column is the class label.
-    feature_names : list of str
-        Names for printing.
     n_neighbors : int
         Number of neighbours used to estimate hit/miss distances.
     n_samples : int
@@ -460,7 +453,7 @@ def relief(features, labels, feature_names, n_neighbors=50, n_samples=500, top_n
 
     print("\n========== ReliefF ==========\n")
     for i in range(min(top_n, n_features)):
-        name = feature_names[sorted_idx[i]] if feature_names else f"feature_{sorted_idx[i]}"
+        name = FEATURES_NAMES[sorted_idx[i]] if FEATURES_NAMES else f"feature_{sorted_idx[i]}"
         print(f"{i+1:02d}. {name:>20s}  |  score = {sorted_scores[i]:.4f}")
         top_features.append(name)
         

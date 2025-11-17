@@ -43,7 +43,7 @@ def partA ():
 
     # --- Exercise 4.2: Feature Extraction ---
     
-    features, labels, feature_names = extract_features(data, variables_modules, window_duration=5.0, overlap_ratio=0.5)
+    features, labels = extract_features(data, variables_modules, window_duration=5.0, overlap_ratio=0.5)
     features = zscore_normalization(features)
 
     # --- Exercise 4.3: PCA ---
@@ -55,16 +55,16 @@ def partA ():
 
     analyse_pca(explained_variance_ratio)
 
-    # --- Exercise 4.5: Fisher names and ReliefF ---
+    # --- Exercise 4.5: Fisher and ReliefF ---
 
-    fisher(features, labels, feature_names)
-    relief(features, labels, feature_names=feature_names, n_neighbors=100)
+    fisher(features, labels)
+    relief(features, labels, n_neighbors=100)
 
 def partB ():
 
     # --- Pre game data loading and preprocessing ---
 
-    data, features, names, labels = reload_data()
+    data, features, labels = reload_data()
     base_labels = labels.copy()
     features, labels = discard_activities(features=features, labels=labels)
     
@@ -78,21 +78,18 @@ def partB ():
 
     # --- Exercise 1.3: Visualize Synthetic vs Real Samples ---
 
-    plot_synthetic_vs_real(features, labels, names, synthetic_features)
+    plot_synthetic_vs_real(features, labels, synthetic_features)
 
     # --- Exercise 2.1: Embeddings ---
 
     embeddings = compute_embeddings(data, fs=51.5, window_duration=5.0, overlap_ratio=0.5, batch_size=32)
     embeddings = discard_activities(embeddings=embeddings, labels=base_labels)
 
-    print(f"Embeddings shape after discarding activities > 7: {embeddings.shape}")
-    print(f"Labels shape after discarding activities > 7: {labels.shape}")
-
 if __name__ == "__main__":
 
     #--- Run Part A Exercises ---
 
-    '''partA()'''
+    partA()
 
     #--- Run Part B Exercises ---
 

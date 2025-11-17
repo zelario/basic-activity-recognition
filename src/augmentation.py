@@ -10,7 +10,7 @@ This module contains functions for:
 - visualizing augmented data and PCA results.
 
 Artifacts expected in `data/` folder:
-- features.npy, pca.npy, names.npy, labels.npy
+- features.npy, pca.npy, labels.npy
 """
 from load import *
 from outliers import *
@@ -49,21 +49,19 @@ def reload_data():
 	try:
 		data = np.load("data/data.npy", allow_pickle=True)
 		features = np.load("data/features.npy", allow_pickle=True)
-		names = np.load("data/names.npy", allow_pickle=True)
 		labels = np.load("data/labels.npy", allow_pickle=True)
 
 	except FileNotFoundError:
 		data = load_data()
 		variables_modules = compute_modules(data)
 
-		features, labels, names = extract_features(data, variables_modules, window_duration=5.0, overlap_ratio=0.5)
+		features, labels = extract_features(data, variables_modules, window_duration=5.0, overlap_ratio=0.5)
 
 		np.save("data/data.npy", data)
 		np.save("data/features.npy", features)
 		np.save("data/labels.npy", labels)
-		np.save("data/names.npy", names)
 
-	return data, features, names, labels
+	return data, features, labels
 
 def discard_activities(features=None, pca=None, labels=None, embeddings=None):
 	"""Discard samples whose activity label is greater than 7.
@@ -170,7 +168,7 @@ def augment_activity_data(features, labels, activity=4, participant=3, n_samples
 
     return synthetic_features
 
-def plot_synthetic_vs_real(features, labels, names, synthetic_features, activity=4, participant=3):
+def plot_synthetic_vs_real(features, labels, synthetic_features, activity=4, participant=3):
 	"""Visualize real and synthetic samples using a 2D scatter plot of the first two features.
 
 	Parameters
@@ -179,12 +177,8 @@ def plot_synthetic_vs_real(features, labels, names, synthetic_features, activity
 		Feature matrix of shape (n_samples, n_features) for all real samples.
 	labels : matrix, shape (n_samples, 2)
 		Array of shape (n_samples, 2) for all real samples.
-	names : matrix
-		names matrix containing feature names for plot labels.
 	synthetic_features : matrix, shape (n_synthetic, n_features)
 		Feature matrix for the synthetic samples.
-	synthetic_labels : matrix, shape (n_synthetic, 2)
-		Labels for the synthetic samples.
 	activity : int
 		The activity ID to plot.
 	participant : int
@@ -203,8 +197,8 @@ def plot_synthetic_vs_real(features, labels, names, synthetic_features, activity
 	if synthetic_features.any():
 		plt.scatter(synthetic_features[:, 0], synthetic_features[:, 1], c='red', marker='o', label='Synthetic')
 	
-	plt.xlabel(names[0][0])
-	plt.ylabel(names[0][1])
+	plt.xlabel(FEATURES_NAMES[0])
+	plt.ylabel(FEATURES_NAMES[1])
 	plt.title(f'Activity {activity}, Participant {participant}: Synthetic vs Real Samples')
 	plt.legend()
 	plt.tight_layout()
