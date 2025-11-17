@@ -3,7 +3,6 @@ import numpy as np
 
 from features import _sliding_windows
 
-
 ########################### PROVIDED CODE ###########################
 
 def load_model():

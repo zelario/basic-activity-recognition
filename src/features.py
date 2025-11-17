@@ -192,7 +192,7 @@ def _extract_window_features(signal):
     return feature_values
 
 
-def _zscore_normalization(features, eps=1e-12):
+def zscore_normalization(features, eps=1e-12):
     """Column-wise z-score normalization.
 
     Parameters
@@ -251,7 +251,7 @@ def extract_features(data, variables_modules, window_duration=5.0, overlap_ratio
         "skewness", "kurtosis", "iqr", "zero_crossing_rate", "mean_crossing_rate", "spectral_entropy"
     ]
 
-    feature_names = [f"acc_{name}" for name in base_feature_names] + \
+    names = [f"acc_{name}" for name in base_feature_names] + \
                     [f"gyro_{name}" for name in base_feature_names] + \
                     [f"mag_{name}" for name in base_feature_names]
 
@@ -285,10 +285,7 @@ def extract_features(data, variables_modules, window_duration=5.0, overlap_ratio
     features = np.array(features)
     labels = np.array(labels)
 
-    # Z-score normalization
-    features = _zscore_normalization(features)
-
-    return features, labels, feature_names
+    return features, labels, names
 
 # --- Exercise 4.3: PCA ---
 
@@ -304,19 +301,19 @@ def compute_pca(features, n_components=None):
 
     Returns
     -------
-    pca_matrix : matrix, shape (n_samples, n_components)
+    pca: matrix, shape (n_samples, n_components)
         The transformed data (scores) of shape (n_samples, n_components).
     explained_variance_ratio : array 
         Array containing the variance ratio explained by each component."""
 
     n_components = n_components or min(features.shape)
 
-    pca = PCA(n_components=n_components)
-    pca_matrix = pca.fit_transform(features)
+    pca_output = PCA(n_components=n_components)
+    pca = pca_output.fit_transform(features)
 
-    explained_variance_ratio = pca.explained_variance_ratio_
+    explained_variance_ratio = pca_output.explained_variance_ratio_
 
-    return pca_matrix, explained_variance_ratio
+    return pca, explained_variance_ratio
 
 # --- Exercise 4.4: PCA Analysis  ---
 
@@ -406,7 +403,7 @@ def fisher(features, labels, feature_names):
     return top10
 
 
-def relief(features, labels, feature_names, n_neighbors=50, n_samples=500):
+def relief(features, labels, feature_names, n_neighbors=50, n_samples=500, top_n=10):
     """Approximate ReliefF feature ranking using random sampling.
 
     This is a simplified and efficient approximation of ReliefF. A subset 
@@ -432,8 +429,8 @@ def relief(features, labels, feature_names, n_neighbors=50, n_samples=500):
 
     Returns
     -------
-    top10 : list of str
-        Top 10 feature names sorted by the approximate ReliefF score."""
+    top_n : list of str
+        Top n feature names sorted by the approximate ReliefF score."""
     
     n_total = features.shape[0]
     n_features = features.shape[1]
@@ -459,12 +456,12 @@ def relief(features, labels, feature_names, n_neighbors=50, n_samples=500):
     sorted_idx = np.argsort(scores)[::-1]
     sorted_scores = scores[sorted_idx]
 
-    top10 = []
+    top_features = []
 
     print("\n========== ReliefF ==========\n")
-    for i in range(min(10, n_features)):
+    for i in range(min(top_n, n_features)):
         name = feature_names[sorted_idx[i]] if feature_names else f"feature_{sorted_idx[i]}"
         print(f"{i+1:02d}. {name:>20s}  |  score = {sorted_scores[i]:.4f}")
-        top10.append(name)
+        top_features.append(name)
         
-    return top10
+    return top_features

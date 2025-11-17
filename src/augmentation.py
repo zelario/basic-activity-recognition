@@ -49,7 +49,6 @@ def reload_data():
 	try:
 		data = np.load("data/data.npy", allow_pickle=True)
 		features = np.load("data/features.npy", allow_pickle=True)
-		pca = np.load("data/pca.npy", allow_pickle=True)
 		names = np.load("data/names.npy", allow_pickle=True)
 		labels = np.load("data/labels.npy", allow_pickle=True)
 
@@ -57,29 +56,14 @@ def reload_data():
 		data = load_data()
 		variables_modules = compute_modules(data)
 
-		features, labels, feature_names = extract_features(data, variables_modules, window_duration=5.0, overlap_ratio=0.5)
-
-		n_components = 36
-		pca, explained_variance_ratio = compute_pca(features, n_components)
-
-		analyse_pca(explained_variance_ratio)
-
-		fisher_features = fisher(features, labels, feature_names)
-		relief_features = relief(features, labels, feature_names=feature_names, n_neighbors=100)
-
-		names = np.array([
-			feature_names,
-			fisher_features,
-			relief_features
-		], dtype=object)
+		features, labels, names = extract_features(data, variables_modules, window_duration=5.0, overlap_ratio=0.5)
 
 		np.save("data/data.npy", data)
 		np.save("data/features.npy", features)
-		np.save("data/pca.npy", pca)
 		np.save("data/labels.npy", labels)
 		np.save("data/names.npy", names)
 
-	return data, features, pca, names, labels
+	return data, features, names, labels
 
 def discard_activities(features=None, pca=None, labels=None, embeddings=None):
 	"""Discard samples whose activity label is greater than 7.
@@ -98,12 +82,15 @@ def discard_activities(features=None, pca=None, labels=None, embeddings=None):
 	features, pca, labels : tuple of matrixes
 		Filtered arrays containing only the rows for which activity <= 7."""
 	
-	if features is not None and pca is not None and labels is not None:
+	if features is not None and labels is not None:
 		mask = labels[:, 0] <= 7
-		return features[mask], pca[mask], labels[mask]
+		return features[mask], labels[mask]
 	if embeddings is not None and labels is not None:
 		mask = labels[:, 0] <= 7
 		return embeddings[mask]
+	if pca is not None and labels is not None:
+		mask = labels[:, 0] <= 7
+		return pca[mask], labels[mask]
 
 # --- Exercise 1.1: Data Augmentation with SMOTE ---
 
@@ -128,15 +115,13 @@ def analyze_activity_balance(labels):
 	for activity, count in zip(unique, counts):
 		print(f"Activity {activity}: {count} samples")
 
-def augment_activity_data(features, pca, labels, activity=4, participant=3, n_samples=3, ):
+def augment_activity_data(features, labels, activity=4, participant=3, n_samples=3, ):
     """Generate synthetic samples for a specific activity using SMOTE and project them into PCA space.
 
     Parameters
     ----------
     features : np.ndarray
         Original feature matrix (n_samples, n_features)
-    pca : np.ndarray
-        Original PCA-transformed matrix (n_samples, n_components)
     labels : np.ndarray
         Label matrix where column 0: activity, column 1: participant
     activity : int
@@ -183,15 +168,7 @@ def augment_activity_data(features, pca, labels, activity=4, participant=3, n_sa
 
     synthetic_features = np.array(synthetic_features)
 
-    # Project synthetic samples into PCA space
-    pca_model = PCA(n_components=pca.shape[1])
-    pca_model.fit(features)  
-    synthetic_pca = pca_model.transform(synthetic_features)
-
-    # Create synthetic labels
-    synthetic_labels = np.tile([activity, participant], (n_samples, 1))
-
-    return synthetic_features, synthetic_pca, synthetic_labels
+    return synthetic_features
 
 def plot_synthetic_vs_real(features, labels, names, synthetic_features, activity=4, participant=3):
 	"""Visualize real and synthetic samples using a 2D scatter plot of the first two features.

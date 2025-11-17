@@ -44,6 +44,7 @@ def partA ():
     # --- Exercise 4.2: Feature Extraction ---
     
     features, labels, feature_names = extract_features(data, variables_modules, window_duration=5.0, overlap_ratio=0.5)
+    features = zscore_normalization(features)
 
     # --- Exercise 4.3: PCA ---
 
@@ -63,17 +64,17 @@ def partB ():
 
     # --- Pre game data loading and preprocessing ---
 
-    data, features, pca, names, labels = reload_data()
-    old_labels = labels.copy()
-    features, pca, labels = discard_activities(features=features, pca=pca, labels=labels)
-
+    data, features, names, labels = reload_data()
+    base_labels = labels.copy()
+    features, labels = discard_activities(features=features, labels=labels)
+    
     # --- Exercise 1.1: Analyse sample balance ---
 
     analyze_activity_balance(labels)
 
     # --- Exercise 1.2: Data Augmentation with SMOTE ---
 
-    synthetic_features, synthetic_pca, synthetic_labels = augment_activity_data(features, pca, labels)
+    synthetic_features = augment_activity_data(features, labels)
 
     # --- Exercise 1.3: Visualize Synthetic vs Real Samples ---
 
@@ -82,7 +83,7 @@ def partB ():
     # --- Exercise 2.1: Embeddings ---
 
     embeddings = compute_embeddings(data, fs=51.5, window_duration=5.0, overlap_ratio=0.5, batch_size=32)
-    embeddings = discard_activities(embeddings=embeddings, labels=old_labels)
+    embeddings = discard_activities(embeddings=embeddings, labels=base_labels)
 
     print(f"Embeddings shape after discarding activities > 7: {embeddings.shape}")
     print(f"Labels shape after discarding activities > 7: {labels.shape}")
