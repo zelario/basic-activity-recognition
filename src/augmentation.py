@@ -41,8 +41,6 @@ def reload_data():
 		Feature matrix.
 	pca : matrix, shape (n_windows, n_components)
 		PCA-transformed data.
-	names : matrix, shape (3, n_features)
-		Object array containing `[feature_names, fisher_features, relief_features]`.
 	labels : matrix, shape (n_windows, 2)
 		Integer array where column 0 is activity and column 1 is participant id."""
 	

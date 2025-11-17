@@ -387,15 +387,10 @@ def fisher(features, labels):
     sorted_idx = np.argsort(scores)[::-1]
     sorted_scores = scores[sorted_idx]
 
-    top10 = []
-
     print("\n========== Fisher Score ==========")
     for i in range(min(10, n_features)):
         name = FEATURES_NAMES[sorted_idx[i]] if FEATURES_NAMES else f"feature_{sorted_idx[i]}"
         print(f"{i+1:02d}. {name:>20s}  |  score = {sorted_scores[i]:.4f}")
-        top10.append(name)
-
-    return top10
 
 
 def relief(features, labels, n_neighbors=50, n_samples=500, top_n=10):
@@ -449,12 +444,11 @@ def relief(features, labels, n_neighbors=50, n_samples=500, top_n=10):
     sorted_idx = np.argsort(scores)[::-1]
     sorted_scores = scores[sorted_idx]
 
-    top_features = []
+    top_indices = sorted_idx[:top_n]
 
-    print("\n========== ReliefF ==========\n")
-    for i in range(min(top_n, n_features)):
-        name = FEATURES_NAMES[sorted_idx[i]] if FEATURES_NAMES else f"feature_{sorted_idx[i]}"
-        print(f"{i+1:02d}. {name:>20s}  |  score = {sorted_scores[i]:.4f}")
-        top_features.append(name)
-        
-    return top_features
+    print("\n========== ReliefF ==========")
+    for rank, idx in enumerate(top_indices):
+        name = FEATURES_NAMES[idx] if FEATURES_NAMES else f"feature_{idx}"
+        print(f"{rank+1:02d}. {name:>20s}  |  score = {sorted_scores[rank]:.4f} (index {idx})")
+
+    return top_indices
