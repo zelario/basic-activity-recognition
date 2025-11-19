@@ -52,7 +52,11 @@ def resample_to_30hz_5s(acc_xyz, fs_in_hz):
 
     return acc_resampled
 
-def compute_embeddings(data, fs=51.5, window_duration=5.0, overlap_ratio=0.5, batch_size=32):
+# ======================== END OF PROVIDED CODE ========================
+
+# --- Exercise 2.1: Embeddings Computing ---
+
+def compute_embeddings(dataset, fs=51.5, window_duration=5.0, overlap_ratio=0.5, batch_size=32):
     """
     Compute embeddings for the entire dataset using a sliding window approach.
     Ensures window alignment with traditional feature extraction for direct comparison.
@@ -79,20 +83,20 @@ def compute_embeddings(data, fs=51.5, window_duration=5.0, overlap_ratio=0.5, ba
     """
     
     try:
-      embeddings = np.load("data/embeddings.npy", allow_pickle=True)
+      embeddings = np.load("npy/embeddings.npy", allow_pickle=True)
       return embeddings
     
     except FileNotFoundError:
 
       # Use the same sliding window function to ensure pairing with features pca and labels
-      windows = _sliding_windows(data, window_duration, overlap_ratio)
+      windows = _sliding_windows(dataset, window_duration, overlap_ratio)
 
       resampled_windows = []
       labels = []
 
       # Iterate over windows, extract acc raw data, and resample
       for (start_idx, end_idx, activity, participant) in windows:
-          raw_acc_segment = data[start_idx:end_idx, 1:4]  # Acc data in cols 1, 2, 3
+          raw_acc_segment = dataset[start_idx:end_idx, 1:4]  # Acc data in cols 1, 2, 3
           resampled_segment = resample_to_30hz_5s(raw_acc_segment, fs)
           resampled_windows.append(resampled_segment)
           labels.append([activity, participant])
@@ -115,7 +119,7 @@ def compute_embeddings(data, fs=51.5, window_duration=5.0, overlap_ratio=0.5, ba
       embeddings = np.concatenate(embeddings_list, axis=0)
       labels = np.array(labels)
 
-      np.save("data/embeddings.npy", embeddings)
+      np.save("npy/embeddings.npy", embeddings)
 
       return embeddings
 

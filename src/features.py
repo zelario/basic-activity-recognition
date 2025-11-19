@@ -10,13 +10,14 @@ This module contains functions used in the project for:
 - performing PCA and visualizing explained variance,
 - ranking features using Fisher score and a ReliefF procedures.
 
-Column conventions expected in `data` arrays used by windowing functions:
+Column conventions expected in `dataset` arrays used by windowing functions:
 - Column 0: device id 
 - Column 10: timestamp in milliseconds (for timestamp-based windowing)
 - Column 11: activity id 
 - Column 12: participant id 
 """
 
+from log import print_and_log
 import numpy as np
 import matplotlib.pyplot as plt
 from scipy.stats import kstest, f_oneway, kruskal
@@ -33,7 +34,7 @@ FEATURES_NAMES = [
 
 # --- Exercise 4.1: Statistical Tests ---
 
-def normality_and_significance(data, variables_modules, alpha=0.05):
+def normality_and_significance(dataset, variables_modules, alpha=0.05):
     """
     Run normality checks per activity and perform a group-level significance test.
 
@@ -42,25 +43,25 @@ def normality_and_significance(data, variables_modules, alpha=0.05):
 
     Parameters
     ----------
-    data : np.ndarray, shape (n_samples, 13)
+    dataset : np.ndarray, shape (n_samples, 13)
         Raw dataset matrix. Column 11 must contain activity id.
     variables_modules : iterable of (str, np.ndarray)
-        Iterable of (name, modules) pairs, modules aligned with data rows.
+        Iterable of (name, modules) pairs, modules aligned with dataset rows.
     alpha : float, optional
         Significance threshold (default=0.05).
     """
 
-    print("--- Normality and Significance Tests ---")
+    print_and_log("--- Normality and Significance Tests ---")
     for name, modules in variables_modules:
-        print(f"\n--- Variable: {name} ---\n")
+        print_and_log(f"\n--- Variable: {name} ---\n")
 
         normality_results = {}
         activity_groups = []
 
         for activity in range(1, 17):
-            activity_modules = modules[data[:, 11] == activity]
+            activity_modules = modules[dataset[:, 11] == activity]
             if len(activity_modules) < 2:
-                print(f"Activity {activity}: Not enough data")
+                print_and_log(f"Activity {activity}: Not enough data")
                 continue
 
             z_values = (activity_modules - np.mean(activity_modules)) / np.std(activity_modules)
@@ -70,10 +71,10 @@ def normality_and_significance(data, variables_modules, alpha=0.05):
 
             mean_val = np.mean(activity_modules)
             normal_str = "Normal" if p_value > alpha else "Not normal"
-            print(f"Activity {activity}: mean = {mean_val:.4f}, p = {p_value:.4f} -> {normal_str}")
+            print_and_log(f"Activity {activity}: mean = {mean_val:.4f}, p = {p_value:.4f} -> {normal_str}")
 
         if not activity_groups:
-            print("No sufficient data for any activity.")
+            print_and_log("No sufficient data for any activity.")
             continue
 
         if all(p > alpha for p in normality_results.values()):
@@ -83,20 +84,20 @@ def normality_and_significance(data, variables_modules, alpha=0.05):
             test_stat, test_p = kruskal(*activity_groups)
             test_name = "Kruskal-Wallis"
 
-        print(f"\nTest used: {test_name}")
-        print(f"Statistic = {test_stat:.4f} | p-value = {test_p:.4f}")
+        print_and_log(f"\nTest used: {test_name}")
+        print_and_log(f"Statistic = {test_stat:.4f} | p-value = {test_p:.4f}")
         if test_p < alpha:
-            print("Result: Significant differences between activities")
+            print_and_log("Result: Significant differences between activities")
         else:
-            print("Result: No significant differences between activities")
+            print_and_log("Result: No significant differences between activities")
 
-def _sliding_windows(data, window_duration=5.0, overlap=0.5):
+def _sliding_windows(dataset, window_duration=5.0, overlap=0.5):
     """
     Create sliding windows using timestamps, enforcing label/device/participant continuity.
 
     Parameters
     ----------
-    data : np.ndarray, shape (n_samples, 13)
+    dataset : np.ndarray, shape (n_samples, 13)
         Raw data matrix with timestamp and label columns.
     window_duration : float, optional
         Window length in seconds (default=5.0).
@@ -109,13 +110,13 @@ def _sliding_windows(data, window_duration=5.0, overlap=0.5):
         Each tuple is (start_idx, end_idx, activity_id, participant_id).
     """
 
-    activity_ids = np.asarray(data[:, 11]).astype(int)
-    device_ids = np.asarray(data[:, 0]).astype(int)
-    participant_ids = np.asarray(data[:, 12]).astype(int)
-    timestamps = np.asarray(data[:, 10]).astype(float)
+    activity_ids = np.asarray(dataset[:, 11]).astype(int)
+    device_ids = np.asarray(dataset[:, 0]).astype(int)
+    participant_ids = np.asarray(dataset[:, 12]).astype(int)
+    timestamps = np.asarray(dataset[:, 10]).astype(float)
 
     window_duration_ms = int(window_duration * 1000)
-    n = len(data)
+    n = len(dataset)
     windows = []
     start = 0
     while start < n:
@@ -220,16 +221,16 @@ def zscore_normalization(features, eps=1e-12):
     return features
 
 
-def extract_features(data, variables_modules, window_duration=5.0, overlap_ratio=0.5):
+def extract_features(dataset, variables_modules, window_duration=5.0, overlap_ratio=0.5):
     """
     Extract features per window for acceleration, gyroscope, and magnetometer modules.
 
     Parameters
     ----------
-    data : np.ndarray, shape (n_samples, 13)
+    dataset : np.ndarray, shape (n_samples, 13)
         Raw dataset aligned with variable arrays (timestamps & labels).
     variables_modules : iterable of (str, np.ndarray)
-        Iterable of (name, modules) pairs, modules aligned with data rows.
+        Iterable of (name, modules) pairs, modules aligned with dataset rows.
     window_duration : float, optional
         Window duration in seconds (default=5.0).
     overlap_ratio : float, optional
@@ -243,7 +244,7 @@ def extract_features(data, variables_modules, window_duration=5.0, overlap_ratio
         Integer matrix: (activity_label, participant_id) for each window.
     """
 
-    windows = _sliding_windows(data, window_duration, overlap_ratio)
+    windows = _sliding_windows(dataset, window_duration, overlap_ratio)
 
     features = []
     labels = []
@@ -266,7 +267,7 @@ def extract_features(data, variables_modules, window_duration=5.0, overlap_ratio
 
         combined_features = acc_features + gyro_features + mag_features
 
-        participant = int(data[start_idx, 12]) 
+        participant = int(dataset[start_idx, 12]) 
         labels.append((activity_label, participant))
         features.append(combined_features)
 
@@ -383,13 +384,13 @@ def fisher(features, labels):
     sorted_idx = np.argsort(scores)[::-1]
     sorted_scores = scores[sorted_idx]
 
-    print("\n========== Fisher Score ==========")
+    print_and_log("\n========== Fisher Score ==========")
     for i in range(min(10, n_features)):
         name = FEATURES_NAMES[sorted_idx[i]] if FEATURES_NAMES else f"feature_{sorted_idx[i]}"
-        print(f"{i+1:02d}. {name:>20s}  |  score = {sorted_scores[i]:.4f}")
+        print_and_log(f"{i+1:02d}. {name:>20s}  |  score = {sorted_scores[i]:.4f}")
 
 
-def relief(features, labels, n_neighbors=50, n_samples=500, top_n=10):
+def relief(features, labels, n_neighbors=50, n_samples=500, top_n=10, print_output=True):
     """
     Approximate ReliefF feature ranking using random sampling.
 
@@ -441,9 +442,10 @@ def relief(features, labels, n_neighbors=50, n_samples=500, top_n=10):
 
     top_indices = sorted_idx[:top_n]
 
-    print("\n========== ReliefF ==========")
-    for rank, idx in enumerate(top_indices):
-        name = FEATURES_NAMES[idx] if FEATURES_NAMES else f"feature_{idx}"
-        print(f"{rank+1:02d}. {name:>20s}  |  score = {sorted_scores[rank]:.4f} (index {idx})")
+    if print_output:
+        print_and_log("\n========== ReliefF ==========")
+        for rank, idx in enumerate(top_indices):
+            name = FEATURES_NAMES[idx] if FEATURES_NAMES else f"feature_{idx}"
+            print_and_log(f"{rank+1:02d}. {name:>20s}  |  score = {sorted_scores[rank]:.4f} (index {idx})")
 
     return top_indices

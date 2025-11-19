@@ -15,6 +15,7 @@ Artifacts expected in `data/` folder:
 from load import *
 from outliers import *
 from features import *
+from log import print_and_log
 
 import numpy as np
 import matplotlib.pyplot as plt
@@ -23,38 +24,6 @@ from sklearn.decomposition import PCA
 from sklearn.neighbors import NearestNeighbors
 
 # --- Pre Game ---
-
-def reload_data():
-	"""
-	Load or recompute cached feature artifacts from the `data/` folder.
-	Loads precomputed numpy arrays if available; otherwise, recomputes features from raw data and saves them.
-
-	Returns
-	-------
-	data : np.ndarray
-		Raw dataset matrix.
-	features : np.ndarray, shape (n_windows, n_features)
-		Feature matrix.
-	labels : np.ndarray, shape (n_windows, 2)
-		Integer array: column 0 is activity, column 1 is participant ID.
-	"""
-	
-	try:
-		data = np.load("data/data.npy", allow_pickle=True)
-		features = np.load("data/features.npy", allow_pickle=True)
-		labels = np.load("data/labels.npy", allow_pickle=True)
-
-	except FileNotFoundError:
-		data = load_data()
-		variables_modules = compute_modules(data)
-
-		features, labels = extract_features(data, variables_modules, window_duration=5.0, overlap_ratio=0.5)
-
-		np.save("data/data.npy", data)
-		np.save("data/features.npy", features)
-		np.save("data/labels.npy", labels)
-
-	return data, features, labels
 
 def discard_activities(features=None, pca=None, labels=None, embeddings=None):
 	"""
@@ -107,10 +76,10 @@ def analyze_activity_balance(labels):
 	# Count samples per activity
 	activities = labels[:, 0]
 	unique, counts = np.unique(activities, return_counts=True)
-	print("\n--- Activity sample count ---\n")
+	print_and_log("\n--- Activity sample count ---\n")
 
 	for activity, count in zip(unique, counts):
-		print(f"Activity {activity}: {count} samples")
+		print_and_log(f"Activity {activity}: {count} samples")
 
 def augment_activity_data(features, labels, activity=4, participant=3, n_samples=3, ):
 	"""
@@ -194,7 +163,7 @@ def plot_synthetic_vs_real(features, labels, synthetic_features, activity=4, par
 
 	# Plot synthetic samples directly from the provided array
 	if synthetic_features.any():
-		plt.scatter(synthetic_features[:, 0], synthetic_features[:, 1], c='red', marker='o', label='Synthetic')
+		plt.scatter(synthetic_features[:, 0], synthetic_features[:, 1], c='red', label='Synthetic', alpha=0.6)
 	
 	plt.xlabel(FEATURES_NAMES[0])
 	plt.ylabel(FEATURES_NAMES[1])

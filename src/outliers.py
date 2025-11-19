@@ -17,6 +17,7 @@ Column conventions expected in `data` arrays:
 - Column 12: participant id
 """
 
+from log import print_and_log
 import numpy as np
 import matplotlib as mpl
 import matplotlib.pyplot as plt
@@ -44,13 +45,13 @@ ACTIVITY_NAMES = [
 # --- Exercise 3.1: Module Computation ---
 
 
-def compute_modules(data):
+def compute_modules(dataset):
     """
     Compute vector magnitudes (modules) for acceleration, gyroscope, and magnetometer.
 
     Parameters
     ----------
-    data : np.ndarray, shape (n_samples, 13)
+    dataset : np.ndarray, shape (n_samples, 13)
         Raw dataset matrix. Columns 1:4, 4:7, 7:10 are x/y/z for Acc, Gyro, Mag.
 
     Returns
@@ -59,9 +60,9 @@ def compute_modules(data):
         List of (name, modules) for Acc, Gyro, Mag vector magnitudes.
     """
     
-    acc_modules = np.linalg.norm(data[:, 1:4], axis=1)
-    gyro_modules = np.linalg.norm(data[:, 4:7], axis=1)
-    mag_modules = np.linalg.norm(data[:, 7:10], axis=1)
+    acc_modules = np.linalg.norm(dataset[:, 1:4], axis=1)
+    gyro_modules = np.linalg.norm(dataset[:, 4:7], axis=1)
+    mag_modules = np.linalg.norm(dataset[:, 7:10], axis=1)
 
     variables_modules = [
         ("Acceleration (|Acc|)", acc_modules),
@@ -71,24 +72,24 @@ def compute_modules(data):
 
     return variables_modules
 
-def boxplot_modules(data, variables_modules):
+def boxplot_modules(dataset, variables_modules):
     """
     Plot boxplots of variable modules for each activity and selected device.
 
     Parameters
     ----------
-    data : np.ndarray, shape (n_samples, 13)
+    dataset : np.ndarray, shape (n_samples, 13)
         Raw dataset matrix.
     variables_modules : list of (str, np.ndarray)
         List of (name, modules) for Acc, Gyro, Mag vector magnitudes.
     """
     
-    print("\n--- Boxplots of Variable Modules ---")
+    print_and_log("\n--- Boxplots of Variable Modules ---")
     device_choice = int(input("\nPick a device (1-5): "))
 
     for name, modules in variables_modules:
-        activities_col = data[:, 11]
-        devices_col = data[:, 0]
+        activities_col = dataset[:, 11]
+        devices_col = dataset[:, 0]
         activities_number = np.arange(1, 17)
         box_data = []
         positions = []
@@ -113,22 +114,22 @@ def boxplot_modules(data, variables_modules):
 
 # --- Exercise 3.2: Outlier Densities via IQR ---
 
-def outlier_density_iqr(data, variables_modules):
+def outlier_density_iqr(dataset, variables_modules):
     """
     Compute outlier densities per activity using IQR method (right wrist only).
 
     Parameters
     ----------
-    data : np.ndarray, shape (n_samples, 13)
+    dataset : np.ndarray, shape (n_samples, 13)
         Raw dataset matrix.
     variables_modules : list of (str, np.ndarray)
         List of (name, modules) for Acc, Gyro, Mag vector magnitudes.
     """
     
     for variable_name, variable_modules in variables_modules:
-        print(f"\n--- {variable_name} Outlier Densities via IQR ---\n")
-        right_wrist_mask = data[:, 0] == 2
-        activities = data[right_wrist_mask, 11]
+        print_and_log(f"\n--- {variable_name} Outlier Densities via IQR ---\n")
+        right_wrist_mask = dataset[:, 0] == 2
+        activities = dataset[right_wrist_mask, 11]
         variable_modules_right = variable_modules[right_wrist_mask]
         activities_number = np.arange(1, 17)
         densities = np.zeros(16)
@@ -143,17 +144,17 @@ def outlier_density_iqr(data, variables_modules):
             outliers = np.logical_or(act_modules < lower, act_modules > upper)
             density = np.mean(outliers) * 100
             densities[idx] = density
-            print(f"Activity {act}: {density:.2f}% ({np.sum(outliers)}/{act_modules.size})")
+            print_and_log(f"Activity {act}: {density:.2f}% ({np.sum(outliers)}/{act_modules.size})")
 
 # --- Exercise 3.3 and 3.4: Outlier Detection via Z-Score ---
 
-def outlier_density_z_score(data, variables_modules, k):
+def outlier_density_z_score(dataset, variables_modules, k):
     """
     Compute outlier densities per activity using z-score method (right wrist only).
 
     Parameters
     ----------
-    data : np.ndarray, shape (n_samples, 13)
+    dataset : np.ndarray, shape (n_samples, 13)
         Raw dataset matrix.
     variables_modules : list of (str, np.ndarray)
         List of (name, modules) for Acc, Gyro, Mag vector magnitudes.
@@ -161,12 +162,12 @@ def outlier_density_z_score(data, variables_modules, k):
         Z-score threshold for outlier detection.
     """
     
-    print("\n--- Outlier Detection via Z-Score ---")
+    print_and_log("\n--- Outlier Detection via Z-Score ---")
 
     for variable_name, variable_modules in variables_modules:
-        print(f"\n--- {variable_name} Outlier Densities via Z-Score ---\n")
-        right_wrist_mask = data[:, 0] == 2
-        activities = data[right_wrist_mask, 11]
+        print_and_log(f"\n--- {variable_name} Outlier Densities via Z-Score ---\n")
+        right_wrist_mask = dataset[:, 0] == 2
+        activities = dataset[right_wrist_mask, 11]
         variable_modules_right = variable_modules[right_wrist_mask]
 
         for activity in range(1, 17):
@@ -175,7 +176,7 @@ def outlier_density_z_score(data, variables_modules, k):
             n = act_vals.size
 
             if n == 0:
-                print(f"Activity {activity}: 0.00% (0/0)")
+                print_and_log(f"Activity {activity}: 0.00% (0/0)")
                 continue
             std = np.std(act_vals)
 
@@ -188,15 +189,15 @@ def outlier_density_z_score(data, variables_modules, k):
                 outlier_mask = np.abs(z_scores) > k
                 outlier_count = int(outlier_mask.sum())
                 density = float(outlier_mask.mean() * 100.0)
-            print(f"Activity {activity}: {density:.2f}% ({outlier_count}/{n})")
+            print_and_log(f"Activity {activity}: {density:.2f}% ({outlier_count}/{n})")
 
-def _z_score(data, var_modules, activity, k):
+def _z_score(dataset, var_modules, activity, k):
     """
     Return indices of outliers in a variable module for a given activity using z-score.
 
     Parameters
     ----------
-    data : np.ndarray, shape (n_samples, 13)
+    dataset : np.ndarray, shape (n_samples, 13)
         Raw dataset matrix.
     var_modules : np.ndarray
         Variable module values (Acc, Gyro, Mag).
@@ -211,7 +212,7 @@ def _z_score(data, var_modules, activity, k):
         Indices of outlier samples in the filtered activity.
     """
     
-    activity_mask = data[:, 11] == activity
+    activity_mask = dataset[:, 11] == activity
     activity_data = var_modules[activity_mask]
     mean = np.mean(activity_data)
     std = np.std(activity_data)
@@ -219,13 +220,13 @@ def _z_score(data, var_modules, activity, k):
     outlier_idxs = np.where(np.abs(z_scores) > k)[0]
     return outlier_idxs
 
-def plot_zscore_outliers(data, variables_modules, k):
+def plot_zscore_outliers(dataset, variables_modules, k):
     """
     Plot z-score outliers for a selected activity for each variable module.
 
     Parameters
     ----------
-    data : np.ndarray, shape (n_samples, 13)
+    dataset : np.ndarray, shape (n_samples, 13)
         Raw dataset matrix.
     variables_modules : list of (str, np.ndarray)
         List of (name, modules) for Acc, Gyro, Mag vector magnitudes.
@@ -233,12 +234,12 @@ def plot_zscore_outliers(data, variables_modules, k):
         Z-score threshold for outlier detection.
     """
     
-    print("\n--- Z-Score Outlier Visualization ---\n")
+    print_and_log("\n--- Z-Score Outlier Visualization ---\n")
     activity_id = int(input("Pick an activity to highlight outliers (1-16): "))
 
     for variable_name, variable_modules in variables_modules:
-        outlier_idxs = _z_score(data, variable_modules, activity_id, k=k)
-        activity_mask = data[:, 11] == activity_id
+        outlier_idxs = _z_score(dataset, variable_modules, activity_id, k=k)
+        activity_mask = dataset[:, 11] == activity_id
         activity_data = variable_modules[activity_mask]
         idxs = np.arange(activity_data.size)
         plt.figure(figsize=(10, 4))
@@ -267,7 +268,7 @@ def kmeans(variables_modules, n_clusters):
     n_clusters = int(input("\n--- K-Means Clustering ---\n\nChoose the number of clusters: (e.g., 2, 3, 4): "))
 
     for variable_name, variable_modules in variables_modules:
-        print(f"\n--- {variable_name} K-Means Results ---\n")
+        print_and_log(f"\n--- {variable_name} K-Means Results ---\n")
         reshaped_data = np.array(variable_modules).reshape(-1, 1)
         kmeans = KMeans(n_clusters, random_state=42)
         kmeans.fit(reshaped_data)
@@ -276,15 +277,15 @@ def kmeans(variables_modules, n_clusters):
 
         for i in range(n_clusters):
             count = np.sum(labels == i)
-            print(f"Cluster {i}: center = {centers[i][0]:.3f}, samples = {count}")
+            print_and_log(f"Cluster {i}: center = {centers[i][0]:.3f}, samples = {count}")
 
-def plot_kmeans_clusters(data, variables_modules, n_clusters=3):
+def plot_kmeans_clusters(dataset, variables_modules, n_clusters=3):
     """
     Plot KMeans clusters and highlight IQR outliers in 3D feature space for selected activity/device.
 
     Parameters
     ----------
-    data : np.ndarray, shape (n_samples, 13)
+    dataset : np.ndarray, shape (n_samples, 13)
         Raw dataset matrix.
     variables_modules : list of (str, np.ndarray)
         List of (name, modules) for Acc, Gyro, Mag vector magnitudes.
@@ -299,8 +300,8 @@ def plot_kmeans_clusters(data, variables_modules, n_clusters=3):
     gyro_modules = variables_modules[1][1]
     mag_modules = variables_modules[2][1]
 
-    device_mask = data[:, 0] == device_choice
-    activity_mask = data[:, 11] == activity_choice
+    device_mask = dataset[:, 0] == device_choice
+    activity_mask = dataset[:, 11] == activity_choice
     combined_mask = device_mask & activity_mask
 
     activity_idxs = np.where(combined_mask)[0]
@@ -350,13 +351,13 @@ def plot_kmeans_clusters(data, variables_modules, n_clusters=3):
     plt.show()
 
 
-def plot_dbscan_clusters(data, variables_modules, eps=0.5, min_samples=5):
+def plot_dbscan_clusters(dataset, variables_modules, eps=0.5, min_samples=5):
     """
     Plot DBSCAN clusters and highlight outliers in 3D feature space for selected activity/device.
 
     Parameters
     ----------
-    data : np.ndarray, shape (n_samples, 13)
+    dataset : np.ndarray, shape (n_samples, 13)
         Raw dataset matrix.
     variables_modules : list of (str, np.ndarray)
         List of (name, modules) for Acc, Gyro, Mag vector magnitudes.
@@ -366,7 +367,7 @@ def plot_dbscan_clusters(data, variables_modules, eps=0.5, min_samples=5):
         DBSCAN min_samples parameter (default=5).
     """
     
-    print(f"\n--- DBSCAN Clustering ---")
+    print_and_log(f"\n--- DBSCAN Clustering ---")
 
     acc_modules = variables_modules[0][1]
     gyro_modules = variables_modules[1][1]
@@ -375,14 +376,14 @@ def plot_dbscan_clusters(data, variables_modules, eps=0.5, min_samples=5):
     activity_choice = int(input("\nPick an activity to highlight outliers (1-16): "))
     device_choice = int(input("Pick a device to highlight outliers (1-5): "))
 
-    mask = (data[:, 0] == device_choice) & (data[:, 11] == activity_choice)
+    mask = (dataset[:, 0] == device_choice) & (dataset[:, 11] == activity_choice)
     X = np.column_stack([acc_modules, gyro_modules, mag_modules])[mask]
     labels = DBSCAN(eps=eps, min_samples=min_samples).fit_predict(X)
     n_clusters = len(set(labels)) - (1 if -1 in labels else 0)
     n_outliers = np.sum(labels == -1)
 
-    print(f"\nEstimated number of clusters: {n_clusters}")
-    print(f"Number of outliers: {n_outliers}\n")
+    print_and_log(f"\nEstimated number of clusters: {n_clusters}")
+    print_and_log(f"Number of outliers: {n_outliers}\n")
     
     fig = plt.figure(figsize=(10, 7))
     ax = fig.add_subplot(111, projection='3d')

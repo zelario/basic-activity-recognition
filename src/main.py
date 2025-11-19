@@ -1,49 +1,53 @@
+from log import *
 from load import *
 from outliers import *
 from features import *
 from augmentation import *
 from embeddings import *
+from splitting import *
+from model_learning import *
+
 
 def partA ():
 
-    # --- Exercise 1: Load Part Data ---
+    # --- Exercise 1: Load Part Dataset ---
 
-    '''part_data = load_part_data(0)'''
+    '''part_dataset = load_part_dataset(0)'''
 
-    # --- Exercise 2: Load Full Data ---
+    # --- Exercise 2: Load Full Dataset ---
 
-    data = load_data()
+    dataset = load_data()
 
     # --- Exercise 3.1: Variable Modules ---
 
-    variables_modules = compute_modules(data) 
-    boxplot_modules(data, variables_modules)
+    variables_modules = compute_modules(dataset) 
+    boxplot_modules(dataset, variables_modules)
 
     # --- Exercise 3.2: Outlier Densities via IQR ---
 
-    outlier_density_iqr(data, variables_modules)
+    outlier_density_iqr(dataset, variables_modules)
 
     # --- Exercise 3.3 and 3.4: Outlier Detection via Z-Score ---
 
     k=3
-    outlier_density_z_score(data, variables_modules, k)
-    plot_zscore_outliers(data, variables_modules, k)
+    outlier_density_z_score(dataset, variables_modules, k)
+    plot_zscore_outliers(dataset, variables_modules, k)
 
     # --- Exercise 3.6 and 3.7: Clustering ---
 
     n_clusters=3
     kmeans(variables_modules, n_clusters=n_clusters)
-    plot_kmeans_clusters(data, variables_modules, n_clusters=n_clusters)
-    plot_dbscan_clusters(data, variables_modules)
+    plot_kmeans_clusters(dataset, variables_modules, n_clusters=n_clusters)
+    plot_dbscan_clusters(dataset, variables_modules)
 
     # --- Exercise 4.1: Statistical Tests ---
 
     alpha = 0.05
-    normality_and_significance(data, variables_modules, alpha)
+    normality_and_significance(dataset, variables_modules, alpha)
 
     # --- Exercise 4.2: Feature Extraction ---
     
-    features, labels = extract_features(data, variables_modules, window_duration=5.0, overlap_ratio=0.5)
+    features, labels = extract_features(dataset, variables_modules, window_duration=5.0, overlap_ratio=0.5)
     features = zscore_normalization(features)
 
     # --- Exercise 4.3: PCA ---
@@ -62,9 +66,9 @@ def partA ():
 
 def partB ():
 
-    # --- Pre game data loading and preprocessing ---
+    # --- Pre game dataset loading and preprocessing ---
 
-    data, features, labels = reload_data()
+    dataset, features, labels = reload_data()
     base_labels = labels.copy()
     features, labels = discard_activities(features=features, labels=labels)
     
@@ -78,18 +82,37 @@ def partB ():
 
     # --- Exercise 1.3: Visualize Synthetic vs Real Samples ---
 
-    plot_synthetic_vs_real(features, labels, synthetic_features)
+    ''''plot_synthetic_vs_real(features, labels, synthetic_features)'''
 
     # --- Exercise 2.1: Embeddings ---
 
-    embeddings = compute_embeddings(data, fs=51.5, window_duration=5.0, overlap_ratio=0.5, batch_size=32)
+    embeddings = compute_embeddings(dataset, fs=51.5, window_duration=5.0, overlap_ratio=0.5, batch_size=32)
     embeddings = discard_activities(embeddings=embeddings, labels=base_labels)
+
+    # --- Exercise 3.1: Mixed splitting ---
+
+    train_dataset, validation_dataset, test_dataset = mixed_splitting(features, embeddings, labels)
+
+    # --- Exercise 3.2: Participant-based splitting ---
+
+    train_dataset, validation_dataset, test_dataset = participant_splitting(features, embeddings, labels)
+
+    # --- Exercise 3.4: Pipeline training and evaluation ---
+
+    pipeline = prepare_pipeline(train_dataset, validation_dataset, test_dataset)
+
+    # --- Exercise 4.1: knn classifier ---
+
+    knn_model = knn_classifier(pipeline[0], scenario='a', k=3)
+    metrics = validate_model(knn_model, pipeline[1])
 
 if __name__ == "__main__":
 
+    print_and_log(f"\n============================= {datetime.now().strftime("%Y-%m-%d %H:%M:%S")} =============================")
+
     #--- Run Part A Exercises ---
 
-    partA()
+    #partA()
 
     #--- Run Part B Exercises ---
 
