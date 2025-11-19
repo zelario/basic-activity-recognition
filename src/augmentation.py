@@ -51,7 +51,7 @@ def discard_activities(features=None, pca=None, labels=None, embeddings=None):
 		return features[mask], labels[mask]
 	if embeddings is not None and labels is not None:
 		mask = labels[:, 0] <= 7
-		return embeddings[mask]
+		return embeddings[mask], labels[mask]
 	if pca is not None and labels is not None:
 		mask = labels[:, 0] <= 7
 		return pca[mask], labels[mask]

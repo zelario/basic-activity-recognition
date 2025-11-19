@@ -2,6 +2,7 @@ import torch
 import numpy as np
 
 from features import _sliding_windows
+from log import print_and_log
 
 ########################### PROVIDED CODE ###########################
 
@@ -84,7 +85,7 @@ def compute_embeddings(dataset, fs=51.5, window_duration=5.0, overlap_ratio=0.5,
     
     try:
       embeddings = np.load("npy/embeddings.npy", allow_pickle=True)
-      return embeddings
+      return embeddings, None
     
     except FileNotFoundError:
 
@@ -121,5 +122,39 @@ def compute_embeddings(dataset, fs=51.5, window_duration=5.0, overlap_ratio=0.5,
 
       np.save("npy/embeddings.npy", embeddings)
 
-      return embeddings
+      return embeddings, labels
+    
+def check_pairing(embeddings, features, feature_labels, embedding_labels):
+    """
+    Check the pairing between embeddings, features, and labels by printing sample indices and values.
 
+    Parameters
+    ----------
+    embeddings : np.ndarray, shape (n_windows, n_embeddings)
+        Embeddings matrix for all windows.
+    features : np.ndarray, shape (n_windows, n_features)
+        Feature matrix for all windows.
+    labels : np.ndarray, shape (n_windows, 2)
+        Labels array for all windows: [activity, participant].
+
+    Returns
+    -------
+    None
+        Prints sample indices and corresponding values to stdout.
+    """
+
+    if embedding_labels is None: 
+        return
+
+    print_and_log("\n--- Checking pairing between embeddings, features, and labels ---\n")
+
+    print_and_log(f"Features matrix shape: {features.shape}")
+    print_and_log(f"Embeddings matrix shape: {embeddings.shape}")
+    print_and_log(f"Feature labels shape: {feature_labels.shape}")
+    print_and_log(f"Embedding labels shape: {embedding_labels.shape}")
+
+    for feature_label, embedding_label in zip(feature_labels, embedding_labels):
+        if not np.array_equal(feature_label, embedding_label):
+            print_and_log(f"Label mismatch found: Feature label {feature_label}, Embedding label {embedding_label}")
+            return
+    print_and_log("\nAll labels match between features and embeddings.")

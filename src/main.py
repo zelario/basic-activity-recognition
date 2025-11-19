@@ -70,7 +70,6 @@ def partB ():
     # --- Pre game dataset loading and preprocessing ---
 
     dataset, features, labels = reload_data()
-    base_labels = labels.copy()
     features, labels = discard_activities(features=features, labels=labels)
     
     # --- Exercise 1.1: Analyse sample balance ---
@@ -87,12 +86,10 @@ def partB ():
 
     # --- Exercise 2.1: Embeddings ---
 
-    embeddings = compute_embeddings(dataset, fs=51.5, window_duration=5.0, overlap_ratio=0.5, batch_size=32)
-    embeddings = discard_activities(embeddings=embeddings, labels=base_labels)
+    embeddings, embedding_labels = compute_embeddings(dataset, fs=51.5, window_duration=5.0, overlap_ratio=0.5, batch_size=32)
+    embeddings, embedding_labels = discard_activities(embeddings=embeddings, labels=embedding_labels)
 
-    print_and_log(f"\n--- Pairing Verification ---\n\nEmbeddings shape after discarding activities > 7: {embeddings.shape}")
-    print_and_log(f"Features shape after discarding activities > 7: {features.shape}")
-    print_and_log(f"Labels shape after discarding activities > 7: {labels.shape}")
+    check_pairing(embeddings, features, labels, embedding_labels)
 
     '''# --- Exercise 3.1: Mixed splitting ---
 
