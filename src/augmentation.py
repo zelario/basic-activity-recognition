@@ -12,15 +12,14 @@ This module contains functions for:
 Artifacts expected in `data/` folder:
 - features.npy, pca.npy, labels.npy
 """
+
 from load import *
 from outliers import *
 from features import *
-from log import print_and_log
+from log import *
 
 import numpy as np
 import matplotlib.pyplot as plt
-from imblearn.over_sampling import SMOTE
-from sklearn.decomposition import PCA
 from sklearn.neighbors import NearestNeighbors
 
 # --- Pre Game ---
