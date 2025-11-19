@@ -82,12 +82,16 @@ def partB ():
 
     # --- Exercise 1.3: Visualize Synthetic vs Real Samples ---
 
-    ''''plot_synthetic_vs_real(features, labels, synthetic_features)'''
+    '''plot_synthetic_vs_real(features, labels, synthetic_features)'''
 
     # --- Exercise 2.1: Embeddings ---
 
     embeddings = compute_embeddings(dataset, fs=51.5, window_duration=5.0, overlap_ratio=0.5, batch_size=32)
     embeddings = discard_activities(embeddings=embeddings, labels=base_labels)
+
+    print_and_log(f"\n--- Pairing Verification ---\n\nEmbeddings shape after discarding activities > 7: {embeddings.shape}")
+    print_and_log(f"Features shape after discarding activities > 7: {features.shape}")
+    print_and_log(f"Labels shape after discarding activities > 7: {labels.shape}")
 
     # --- Exercise 3.1: Mixed splitting ---
 
@@ -95,7 +99,7 @@ def partB ():
 
     # --- Exercise 3.2: Participant-based splitting ---
 
-    train_dataset, validation_dataset, test_dataset = participant_splitting(features, embeddings, labels)
+    '''train_dataset, validation_dataset, test_dataset = participant_splitting(features, embeddings, labels)'''
 
     # --- Exercise 3.4: Pipeline training and evaluation ---
 
@@ -103,8 +107,10 @@ def partB ():
 
     # --- Exercise 4.1: knn classifier ---
 
-    knn_model = knn_classifier(pipeline[0], scenario='a', k=3)
-    metrics = validate_model(knn_model, pipeline[1])
+    k=3
+    #knn_model = my_knn_classifier(pipeline[0], scenario='a', k=k)
+    knn_model = sklearn_knn_classifier(pipeline[0], scenario='a', k=k)
+    metrics = validate_model(knn_model, pipeline[1], k=k)
 
 if __name__ == "__main__":
 

@@ -59,7 +59,7 @@ def load_data():
         dataset = np.load("npy/dataset.npy", allow_pickle=True)
         return dataset
     except FileNotFoundError:
-        full_data = [load_part_data(i) for i in range(14)]
+        full_dataset = [load_part_data(i) for i in range(14)]
         dataset = np.concatenate(full_dataset, axis=0)
         np.save("npy/dataset.npy", dataset)
         return dataset
