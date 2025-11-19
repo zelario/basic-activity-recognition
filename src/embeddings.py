@@ -7,22 +7,20 @@ from log import print_and_log
 ########################### PROVIDED CODE ###########################
 
 def load_model():
-    """
-    Load the feature extraction model from the OxWearables GitHub repository and return the feature encoder.
+  ''' Loads the model from the github repo and obtains just the feature encoder. '''
 
-    Returns
-    -------
-    model : torch.nn.Module
-        The feature encoder model with the final classification layer replaced by identity.
-    """
-    repo = 'OxWearables/ssl-wearables'
-    # class_num não interessa para extrair features; mas o hub pede este arg
-    model = torch.hub.load(repo, 'harnet5', class_num=5, pretrained=True)
-    # Replace the final classification layer with an identity layer to get the embeddings
-    model.fc = torch.nn.Identity()
-    model.eval()
-    model.to("cpu")
-    return model
+  repo = 'OxWearables/ssl-wearables'
+  # class_num não interessa para extrair features; mas o hub pede este arg
+  model = torch.hub.load(repo, 'harnet5', class_num=5, pretrained=True)
+  model.eval()
+
+  # Passo crucial: ficar só com a parte auto-supervisionada
+  # O README diz que há um 'feature_extractor' (pré-treinado) e um 'classifier' (não treinado). :contentReference[oaicite:14]{index=14}
+  feature_encoder = model.feature_extractor
+  feature_encoder.to("cpu")
+  feature_encoder.eval()
+
+  return feature_encoder
 
 def resample_to_30hz_5s(acc_xyz, fs_in_hz):
     """
@@ -57,7 +55,7 @@ def resample_to_30hz_5s(acc_xyz, fs_in_hz):
 
 # --- Exercise 2.1: Embeddings Computing ---
 
-def compute_embeddings(dataset, fs=51.5, window_duration=5.0, overlap_ratio=0.5, batch_size=32):
+def compute_embeddings(dataset, fs=51.5, window_duration=5.0, overlap_ratio=0.5):
     """
     Compute embeddings for the entire dataset using a sliding window approach.
     Ensures window alignment with traditional feature extraction for direct comparison.
@@ -84,47 +82,51 @@ def compute_embeddings(dataset, fs=51.5, window_duration=5.0, overlap_ratio=0.5,
     """
     
     try:
-      embeddings = np.load("npy/embeddings.npy", allow_pickle=True)
-      embeddings_labels = np.load("npy/embedding_labels.npy", allow_pickle=True)
-      return embeddings, embeddings_labels
+        embeddings = np.load("npy/embeddings.npy", allow_pickle=True)
+        embeddings_labels = np.load("npy/embedding_labels.npy", allow_pickle=True)
+        return embeddings, embeddings_labels
     
     except FileNotFoundError:
 
-      # Use the same sliding window function to ensure pairing with features pca and labels
-      windows = _sliding_windows(dataset, window_duration, overlap_ratio)
+        # Use the same sliding window function to ensure pairing with features pca and labels
+        windows = _sliding_windows(dataset, window_duration, overlap_ratio)
 
-      resampled_windows = []
-      labels = []
+        resampled_windows = []
+        labels = []
 
-      # Iterate over windows, extract acc raw data, and resample
-      for (start_idx, end_idx, activity, participant) in windows:
-          raw_acc_segment = dataset[start_idx:end_idx, 1:4]  # Acc data in cols 1, 2, 3
-          resampled_segment = resample_to_30hz_5s(raw_acc_segment, fs)
-          resampled_windows.append(resampled_segment)
-          labels.append([activity, participant])
+        # Iterate over windows, extract acc raw data, and resample
+        for (start_idx, end_idx, activity, participant) in windows:
+            raw_acc_segment = dataset[start_idx:end_idx, 1:4]  # Acc data in cols 1, 2, 3
+            resampled_segment = resample_to_30hz_5s(raw_acc_segment, fs)
+            resampled_windows.append(resampled_segment)
+            labels.append([activity, participant])
 
-      # Load the feature extraction model
-      feature_encoder = load_model()
+        feature_encoder = load_model()
       
-      # Reshape segments to [n_segments, dimensions(xyz), time]
-      x_all = np.transpose(np.array(resampled_windows), (0, 2, 1))
+        embeddings_list = []
       
-      # Process in batches to get embeddings
-      embeddings_list = []
-      with torch.no_grad():
-          for i in range(0, x_all.shape[0], batch_size):
-              xb = torch.from_numpy(x_all[i:i+batch_size]).float().to("cpu")
-              eb = feature_encoder(xb)
-              embeddings_list.append(eb.cpu().numpy())
+        # Reshape segments to [n_segments, dimensions(xyz), time]
+        x_all = np.transpose(np.array(resampled_windows), (0, 2, 1))
+        print(x_all.shape)
+      
+        batch_size = 5
+        with torch.no_grad():
+            for i in range(0, x_all.shape[0], batch_size):
+                xb = torch.from_numpy(x_all[i:i+batch_size]).float().to("cpu")
+                eb = feature_encoder(xb)
+                embeddings_list.append(eb.cpu().numpy())
 
-      # Concatenate results and create labels array
-      embeddings = np.concatenate(embeddings_list, axis=0)
-      labels = np.array(labels)
+        # Concatenate results and create labels array
+        embeddings = np.concatenate(embeddings_list, axis=0)
+        embeddings = embeddings.reshape(embeddings.shape[0], embeddings.shape[1])
+        print(embeddings.shape)
 
-      np.save("npy/embeddings.npy", embeddings)
-      np.save("npy/embedding_labels.npy", labels)
+        labels = np.array(labels)
 
-      return embeddings, labels
+        np.save("npy/embeddings.npy", embeddings)
+        np.save("npy/embedding_labels.npy", labels)
+
+        return embeddings, labels
     
 def check_pairing(embeddings, features, feature_labels, embedding_labels):
     """

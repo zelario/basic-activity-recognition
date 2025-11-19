@@ -64,5 +64,5 @@ def hyperparemeter_tuning(features, embeddings, labels, k_values, n_repeats=1):
 
 
     split, scenario, best_k = best_overall
-    print_and_log(f"\n--- Best overall mean accuracy ---")
+    print_and_log(f"\n--- Best overall mean accuracy ---\n")
     print_and_log(f"Best mean accuracy: {best_overall_mean_accuracy:.4f} (k={best_k}, split={split}, scenario={scenario})")

@@ -86,7 +86,7 @@ def partB ():
 
     # --- Exercise 2.1: Embeddings ---
 
-    embeddings, embedding_labels = compute_embeddings(dataset, fs=51.5, window_duration=5.0, overlap_ratio=0.5, batch_size=32)
+    embeddings, embedding_labels = compute_embeddings(dataset, fs=51.5, window_duration=5.0, overlap_ratio=0.5)
     embeddings, embedding_labels = discard_activities(embeddings=embeddings, labels=embedding_labels)
 
     check_pairing(embeddings, features, labels, embedding_labels)
