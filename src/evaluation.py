@@ -6,7 +6,7 @@ def hyperparemeter_tuning(features, embeddings, labels, k_values, n_repeats=1):
 
     # Dictionary to store best k and its accuracy for each scenario and splitting method
     best_k_counts = {
-        (scenario, split): [] for split in ['mixed', 'participant'] for scenario in ['a', 'b', 'c']
+        (split, scenario): [] for split in ['mixed', 'participant'] for scenario in ['a', 'b', 'c']
     }
 
     print_and_log(f"\n--- Hyperparameter Tuning over {n_repeats} repeats ---\n")
@@ -17,52 +17,52 @@ def hyperparemeter_tuning(features, embeddings, labels, k_values, n_repeats=1):
         # For each scenario
         for scenario in ['a', 'b', 'c']:
 
-            # For each repeat (number of splits for each method)
-            for repeat in range(n_repeats):
+            # For each k value
+            for k in k_values:
+                accuracies = []
 
-                if split == 'mixed':
-                    train_dataset, validation_dataset, test_dataset = mixed_splitting(features, embeddings, labels)
-                else:
-                    train_dataset, validation_dataset, test_dataset = participant_splitting(features, embeddings, labels)
+                # Compute accuracy over n_repeats
+                for repeat in range(n_repeats):
 
-                pipeline = prepare_pipeline(train_dataset, validation_dataset, test_dataset)
-                best_accuracy = 0.0
-                best_k = None
+                    # Perform splitting based on the current method
+                    if split == 'mixed':
+                        train_dataset, validation_dataset, test_dataset = mixed_splitting(features, embeddings, labels)
+                    else:
+                        train_dataset, validation_dataset, test_dataset = participant_splitting(features, embeddings, labels)
+                    
+                    pipeline = prepare_pipeline(train_dataset, validation_dataset, test_dataset)
 
-                # For each k value in k_values
-                for k in k_values:
                     knn_model = sklearn_knn_classifier(pipeline[0], scenario=scenario, k=k)
                     metrics = validate_model(knn_model, pipeline[1], k=k, print_output=False)
+
+                    # Collect accuracy
                     accuracy = metrics['accuracy']
+                    accuracies.append(accuracy)
+                    print_and_log(f"Split: {split}, Scenario: {scenario}, k={k}, repeat {repeat+1}, accuracy: {accuracy:.4f}")
 
-                    if accuracy > best_accuracy:
-                        best_accuracy = accuracy
-                        best_k = k
+                # Store best k and its mean accuracy for this scenario/split
+                mean_accuracy = sum(accuracies) / len(accuracies)
+                best_k_counts[(split, scenario)].append([k, mean_accuracy])
 
-                best_k_counts[(scenario, split)].append([best_k, best_accuracy, repeat+1])
-                print_and_log(f"Scenario {scenario}, {split} splitting, repeat {repeat+1}: k={best_k} (Accuracy: {best_accuracy:.4f})")
+    best_overall_mean_accuracy = 0
+    best_overall = None
 
-    # Compute and print overall best k frequency and mean accuracy
     print_and_log(f"\n--- Best k for each scenario and splitting method across {n_repeats} repeats ---")
     for key, k_list in best_k_counts.items():
-        scenario, split = key
-
-        # Extract only k values and accuracies from the list of [k, accuracy, repeat]
+        split, scenario = key
         k_values_only = [item[0] for item in k_list]
         accuracy_values_only = [item[1] for item in k_list]
+        best_idx = accuracy_values_only.index(max(accuracy_values_only)) 
+        best_k = k_values_only[best_idx]
+        best_mean_accuracy = accuracy_values_only[best_idx]
+        print_and_log(f"\nScenario {scenario}, {split} splitting: k = {best_k} (Mean Accuracy = {best_mean_accuracy:.4f})")
 
-        # Count frequency of each k and collect accuracies for each k
-        frequency_dict = {}
-        accuracy_dict = {}
-        for k, acc in zip(k_values_only, accuracy_values_only):
-            frequency_dict[k] = frequency_dict.get(k, 0) + 1
-            if k not in accuracy_dict:
-                accuracy_dict[k] = []
-            accuracy_dict[k].append(acc)
+        # Track best overall mean accuracy
+        if best_mean_accuracy > best_overall_mean_accuracy:
+            best_overall_mean_accuracy = best_mean_accuracy
+            best_overall = (split, scenario, best_k)
 
-        # Find the most common k
-        most_common_k = max(frequency_dict, key=frequency_dict.get)
-        frequency = frequency_dict[most_common_k]
-        mean_accuracy = sum(accuracy_dict[most_common_k]) / len(accuracy_dict[most_common_k]) if accuracy_dict[most_common_k] else 0.0
-        print_and_log(f"\nScenario {scenario}, {split} splitting: k = {most_common_k} (Frequency: {frequency}, Mean Accuracy = {mean_accuracy:.4f})")
-        print_and_log(f"All best k values: {k_values_only}")
+
+    split, scenario, best_k = best_overall
+    print_and_log(f"\n--- Best overall mean accuracy ---")
+    print_and_log(f"Best mean accuracy: {best_overall_mean_accuracy:.4f} (k={best_k}, split={split}, scenario={scenario})")
