@@ -1,3 +1,4 @@
+from evaluation import hyperparemeter_tuning
 from log import *
 from load import *
 from outliers import *
@@ -93,13 +94,13 @@ def partB ():
     print_and_log(f"Features shape after discarding activities > 7: {features.shape}")
     print_and_log(f"Labels shape after discarding activities > 7: {labels.shape}")
 
-    # --- Exercise 3.1: Mixed splitting ---
+    '''# --- Exercise 3.1: Mixed splitting ---
 
     train_dataset, validation_dataset, test_dataset = mixed_splitting(features, embeddings, labels)
 
     # --- Exercise 3.2: Participant-based splitting ---
 
-    '''train_dataset, validation_dataset, test_dataset = participant_splitting(features, embeddings, labels)'''
+    #train_dataset, validation_dataset, test_dataset = participant_splitting(features, embeddings, labels)
 
     # --- Exercise 3.4: Pipeline training and evaluation ---
 
@@ -110,7 +111,11 @@ def partB ():
     k=3
     #knn_model = my_knn_classifier(pipeline[0], scenario='a', k=k)
     knn_model = sklearn_knn_classifier(pipeline[0], scenario='a', k=k)
-    metrics = validate_model(knn_model, pipeline[1], k=k)
+    metrics = validate_model(knn_model, pipeline[1], k=k)'''
+
+    # --- Exercise 5.1: Hyperparameter Tuning ---
+
+    hyperparemeter_tuning(features, embeddings, labels, k_values=[1, 3, 5, 7, 11, 13, 17, 19], n_repeats=10)
 
 if __name__ == "__main__":
 
