@@ -6,7 +6,7 @@ from features import zscore_normalization
 
 # --- Exercise 3.1: Mixed participant splitting ---
 
-def mixed_splitting(features, embeddings, labels):
+def mixed_splitting(features, embeddings, labels, validation=True):
     """Split features, embeddings, and labels into training, validation, and test sets using mixed participant splitting.
     Ensures consistent splits across all representations and stratifies by the first label column.
 
@@ -23,8 +23,8 @@ def mixed_splitting(features, embeddings, labels):
     -------
     train_dataset : tuple
         (features, embeddings, labels) for training set.
-    validation_dataset : tuple
-        (features, embeddings, labels) for validation set.
+    validation_dataset : tuple or None
+        (features, embeddings, labels) for validation set, or None if validation=False.
     test_dataset : tuple
         (features, embeddings, labels) for test set."""
 
@@ -33,21 +33,24 @@ def mixed_splitting(features, embeddings, labels):
         features, embeddings, labels, test_size=0.2, random_state=None, stratify=labels[:, 0]
     )
 
-    # Second split: Train and Val
-    train_features, val_features, train_embeddings, validation_embeddings, train_labels, validation_labels = train_test_split(
-        train_val_features, train_val_embeddings, train_val_labels, test_size=0.25, random_state=None, stratify=train_val_labels[:, 0]
-    )
+    if validation:
+        # Second split: Train and Val
+        train_features, val_features, train_embeddings, validation_embeddings, train_labels, validation_labels = train_test_split(
+            train_val_features, train_val_embeddings, train_val_labels, test_size=0.2, random_state=None, stratify=train_val_labels[:, 0]
+        )
+        train_dataset = np.array(train_features), np.array(train_embeddings), np.array(train_labels)
+        validation_dataset = np.array(val_features), np.array(validation_embeddings), np.array(validation_labels)
+    else:
+        train_dataset = np.array(train_val_features), np.array(train_val_embeddings), np.array(train_val_labels)
+        validation_dataset = None
 
-    # Combine splits
-    train_dataset = np.array(train_features), np.array(train_embeddings), np.array(train_labels)
-    validation_dataset = np.array(val_features), np.array(validation_embeddings), np.array(validation_labels)
     test_dataset = np.array(test_features), np.array(test_embeddings), np.array(test_labels)
 
     return train_dataset, validation_dataset, test_dataset
 
 # --- Exercise 3.2: Participant-based splitting ---
 
-def participant_splitting(features, embeddings, labels, train_n=9, validation_n=3, test_n=3):
+def participant_splitting(features, embeddings, labels, train_n=9, validation_n=3, test_n=3, validation=True):
     """Split features, embeddings, and labels into training, validation, and test sets by participant groups.
     Ensures no data leakage between sets by assigning unique participants to each split.
 
@@ -65,38 +68,51 @@ def participant_splitting(features, embeddings, labels, train_n=9, validation_n=
         Number of participants in validation set (default=3).
     test_n : int, optional
         Number of participants in test set (default=3).
+    validation : bool, optional
+        Whether to create a validation split (default=True).
 
     Returns
     -------
     train_dataset : tuple
         (features, embeddings, labels) for training set.
-    validation_dataset : tuple
-        (features, embeddings, labels) for validation set.
+    validation_dataset : tuple or None
+        (features, embeddings, labels) for validation set, or None if validation=False.
     test_dataset : tuple
         (features, embeddings, labels) for test set."""
 
     random = np.random.default_rng(None)
-
-    # Get unique subject IDs
     participants = np.unique(labels[:, 1])
-
-    # Shuffle subjects
     participants_shuffled = random.permutation(participants)
 
-    # Assign subjects to splits
-    train_participants = participants_shuffled[:train_n]
-    validation_participants = participants_shuffled[train_n:train_n+validation_n]
-    test_participants = participants_shuffled[train_n+validation_n:train_n+validation_n+test_n]
-    
-    # Create masks
-    train_mask = np.isin(labels[:, 1], train_participants)
-    validation_mask = np.isin(labels[:, 1], validation_participants)
-    test_mask = np.isin(labels[:, 1], test_participants)
+    if validation:
 
-    # Combine splits
-    train_dataset = np.array(features[train_mask])  , np.array(embeddings[train_mask]), np.array(labels[train_mask])
-    validation_dataset = np.array(features[validation_mask]), np.array(embeddings[validation_mask]), np.array(labels[validation_mask])
-    test_dataset = np.array(features[test_mask]), np.array(embeddings[test_mask]), np.array(labels[test_mask])
+        # Split participants into Train, Validation, and Test
+        train_participants = participants_shuffled[:train_n]
+        validation_participants = participants_shuffled[train_n:train_n+validation_n]
+        test_participants = participants_shuffled[train_n+validation_n:train_n+validation_n+test_n]
+
+        # Create masks for each split
+        train_mask = np.isin(labels[:, 1], train_participants)
+        validation_mask = np.isin(labels[:, 1], validation_participants)
+        test_mask = np.isin(labels[:, 1], test_participants)
+
+        # Create datasets
+        train_dataset = np.array(features[train_mask]), np.array(embeddings[train_mask]), np.array(labels[train_mask])
+        validation_dataset = np.array(features[validation_mask]), np.array(embeddings[validation_mask]), np.array(labels[validation_mask])
+        test_dataset = np.array(features[test_mask]), np.array(embeddings[test_mask]), np.array(labels[test_mask])
+    else:
+        # Split participants into Train and Test
+        train_participants = participants_shuffled[:train_n+validation_n]
+        test_participants = participants_shuffled[train_n+validation_n:train_n+validation_n+test_n]
+
+        # Create masks for each split
+        train_mask = np.isin(labels[:, 1], train_participants)
+        test_mask = np.isin(labels[:, 1], test_participants)
+
+        # Create datasets
+        train_dataset = np.array(features[train_mask]), np.array(embeddings[train_mask]), np.array(labels[train_mask])
+        validation_dataset = None
+        test_dataset = np.array(features[test_mask]), np.array(embeddings[test_mask]), np.array(labels[test_mask])
 
     return train_dataset, validation_dataset, test_dataset
 
