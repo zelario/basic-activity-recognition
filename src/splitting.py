@@ -155,19 +155,26 @@ def prepare_pipeline(train_dataset, validation_dataset, test_dataset):
         [all_features, pca_features, relief_features, embeddings, labels]"""
 
     # Unpack datasets and set Scenario a: All features/embeddings
-    train_features_all, train_embeddings, train_labels = train_dataset
+    train_features_all, train_embeddings_all, train_labels = train_dataset
     validation_features_all, validation_embeddings, validation_labels = validation_dataset
     test_features_all, test_embeddings, test_labels = test_dataset
 
-    # Scenario b: PCA-reduced features (90% variance)
-    train_features_pca, explained_variance_ratio = compute_pca(train_features_all, n_components=None)
-    cumulative = np.cumsum(explained_variance_ratio)
-    n_components_90 = np.argmax(cumulative >= 0.9) + 1
-    train_features_pca = train_features_pca[:, :n_components_90]
+    # Scenario b: PCA-reduced features and embeddings (90% variance)
+    train_features_pca, explained_variance_features = compute_pca(train_features_all, n_components=None)
+    train_embeddings_pca, explained_variance_embeddings = compute_pca(train_embeddings_all, n_components=None)
 
-    validation_features_pca, _ = compute_pca(validation_features_all, n_components=n_components_90)
-    test_features_pca, _ = compute_pca(test_features_all, n_components=n_components_90)
+    cumulative_features = np.cumsum(explained_variance_features)
+    n_components_90_features = np.argmax(cumulative_features >= 0.9) + 1
 
+    cumulative_embeddings = np.cumsum(explained_variance_embeddings)
+    n_components_90_embeddings = np.argmax(cumulative_embeddings >= 0.9) + 1
+
+    train_features_pca = train_features_pca[:, :n_components_90_features]
+    train_embeddings_pca = train_embeddings_pca[:, :n_components_90_embeddings]
+
+    validation_features_pca, _ = compute_pca(validation_features_all, n_components=n_components_90_features)
+    test_features_pca, _ = compute_pca(test_features_all, n_components=n_components_90_features)
+    
     # Scenario c: ReliefF-selected top 15 features
     normalized_train_features = zscore_normalization(train_features_all)
     top_15_indices = relief(normalized_train_features, train_labels, top_n=15, print_output=False)
@@ -181,7 +188,8 @@ def prepare_pipeline(train_dataset, validation_dataset, test_dataset):
             np.array(train_features_all),
             np.array(train_features_pca),
             np.array(train_features_relief),
-            np.array(train_embeddings),
+            np.array(train_embeddings_all),
+            np.array(train_embeddings_pca),
             np.array(train_labels)
         ],
         [

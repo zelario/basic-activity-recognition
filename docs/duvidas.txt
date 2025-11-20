@@ -1,0 +1,15 @@
+
+1. Calcular pca com base no treino apenas, ou seja normalizar valores de val e test com 
+    medias e desvio padrao dos de treino, e projetar a matriz de pca train nas outras
+
+2. Mudar para 2 splits, 2 tipos (features ou embeddings), 3 scenarios
+
+3. Devem ser 20 splits, 10 para cada split type
+
+EXTRA:
+
+fazer label de device por device
+
+balanceamento de atividades smote
+
+retirar outliers de cada atividade
