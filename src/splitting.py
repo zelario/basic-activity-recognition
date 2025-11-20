@@ -34,6 +34,7 @@ def mixed_splitting(features, embeddings, labels, validation=True):
     )
 
     if validation:
+
         # Second split: Train and Val
         train_features, val_features, train_embeddings, validation_embeddings, train_labels, validation_labels = train_test_split(
             train_val_features, train_val_embeddings, train_val_labels, test_size=0.2, random_state=None, stratify=train_val_labels[:, 0]
@@ -41,6 +42,7 @@ def mixed_splitting(features, embeddings, labels, validation=True):
         train_dataset = np.array(train_features), np.array(train_embeddings), np.array(train_labels)
         validation_dataset = np.array(val_features), np.array(validation_embeddings), np.array(validation_labels)
     else:
+
         train_dataset = np.array(train_val_features), np.array(train_val_embeddings), np.array(train_val_labels)
         validation_dataset = None
 
@@ -101,6 +103,7 @@ def participant_splitting(features, embeddings, labels, train_n=9, validation_n=
         validation_dataset = np.array(features[validation_mask]), np.array(embeddings[validation_mask]), np.array(labels[validation_mask])
         test_dataset = np.array(features[test_mask]), np.array(embeddings[test_mask]), np.array(labels[test_mask])
     else:
+
         # Split participants into Train and Test
         train_participants = participants_shuffled[:train_n+validation_n]
         test_participants = participants_shuffled[train_n+validation_n:train_n+validation_n+test_n]
@@ -154,34 +157,64 @@ def prepare_pipeline(train_dataset, validation_dataset, test_dataset):
         Array containing for each split (train, val, test):
         [all_features, pca_features, relief_features, embeddings, labels]"""
 
-    # Unpack datasets and set Scenario a: All features/embeddings
+    # === Scenario a: All features/embeddings ===
+
+    # Unpack datasets
     train_features_all, train_embeddings_all, train_labels = train_dataset
-    validation_features_all, validation_embeddings, validation_labels = validation_dataset
-    test_features_all, test_embeddings, test_labels = test_dataset
+    validation_features_all, validation_embeddings_all, validation_labels = validation_dataset
+    test_features_all, test_embeddings_all, test_labels = test_dataset
 
-    # Scenario b: PCA-reduced features and embeddings (90% variance)
-    train_features_pca, explained_variance_features = compute_pca(train_features_all, n_components=None)
-    train_embeddings_pca, explained_variance_embeddings = compute_pca(train_embeddings_all, n_components=None)
+    # === Scenario b: PCA-reduced features and embeddings (90% variance) ===
 
+    # Normalize training features and embeddings
+    normalized_train_features, feature_means, feature_stds = zscore_normalization(train_features_all, return_parameters=True)
+    normalized_train_embeddings, embedding_means, embedding_stds = zscore_normalization(train_embeddings_all, return_parameters=True)
+
+    # Compute PCA on normalized training features and embeddings
+    train_features_pca, explained_variance_features, pca_object_features = compute_pca(normalized_train_features, n_components=None)
+    train_embeddings_pca, explained_variance_embeddings, pca_object_embeddings = compute_pca(normalized_train_embeddings, n_components=None)
+
+    # Determine number of components to retain 90% variance
     cumulative_features = np.cumsum(explained_variance_features)
     n_components_90_features = np.argmax(cumulative_features >= 0.9) + 1
 
     cumulative_embeddings = np.cumsum(explained_variance_embeddings)
     n_components_90_embeddings = np.argmax(cumulative_embeddings >= 0.9) + 1
 
+    # Reduce to selected number of components
     train_features_pca = train_features_pca[:, :n_components_90_features]
     train_embeddings_pca = train_embeddings_pca[:, :n_components_90_embeddings]
 
-    validation_features_pca, _ = compute_pca(validation_features_all, n_components=n_components_90_features)
-    test_features_pca, _ = compute_pca(test_features_all, n_components=n_components_90_features)
-    
-    # Scenario c: ReliefF-selected top 15 features
-    normalized_train_features = zscore_normalization(train_features_all)
-    top_15_indices = relief(normalized_train_features, train_labels, top_n=15, print_output=False)
+    # Apply normalization to validation set
+    normalized_validation_features = zscore_normalization(validation_features_all, mean_values=feature_means, std_values=feature_stds)
+    normalized_validation_embeddings = zscore_normalization(validation_embeddings_all, mean_values=embedding_means, std_values=embedding_stds)
 
-    train_features_relief = train_features_all[:, top_15_indices]
-    validation_features_relief = validation_features_all[:, top_15_indices]
-    test_features_relief = test_features_all[:, top_15_indices]
+    # Project validation set using PCA fitted on training set
+    validation_features_pca = compute_pca(normalized_validation_features, n_components=n_components_90_features, pca_object=pca_object_features)
+    validation_embeddings_pca = compute_pca(normalized_validation_embeddings, n_components=n_components_90_embeddings, pca_object=pca_object_embeddings)
+
+    # Apply normalization to test set
+    normalized_test_features = zscore_normalization(test_features_all, mean_values=feature_means, std_values=feature_stds)
+    normalized_test_embeddings = zscore_normalization(test_embeddings_all, mean_values=embedding_means, std_values=embedding_stds)
+
+    # Project test set using PCA fitted on training set
+    test_features_pca = compute_pca(normalized_test_features, n_components=n_components_90_features, pca_object=pca_object_features)
+    test_embeddings_pca = compute_pca(normalized_test_embeddings, n_components=n_components_90_embeddings, pca_object=pca_object_embeddings)
+    
+    # === Scenario c: ReliefF-selected top 15 features ===
+
+    # Select top 15 features using ReliefF on normalized training features and embeddings
+    top_15_features_indices = relief(normalized_train_features, train_labels, top_n=15, print_output=False)
+    top_15_embeddings_indices = relief(normalized_train_embeddings, train_labels, top_n=15, print_output=False)
+
+    # Apply feature selection to all splits
+    train_features_relief = train_features_all[:, top_15_features_indices]
+    validation_features_relief = validation_features_all[:, top_15_features_indices]
+    test_features_relief = test_features_all[:, top_15_features_indices]
+
+    train_embeddings_relief = train_embeddings_all[:, top_15_embeddings_indices]
+    validation_embeddings_relief = validation_embeddings_all[:, top_15_embeddings_indices]
+    test_embeddings_relief = test_embeddings_all[:, top_15_embeddings_indices]
 
     pipeline = [
         [
@@ -190,20 +223,25 @@ def prepare_pipeline(train_dataset, validation_dataset, test_dataset):
             np.array(train_features_relief),
             np.array(train_embeddings_all),
             np.array(train_embeddings_pca),
+            np.array(train_embeddings_relief),
             np.array(train_labels)
         ],
         [
             np.array(validation_features_all),
             np.array(validation_features_pca),
             np.array(validation_features_relief),
-            np.array(validation_embeddings),
+            np.array(validation_embeddings_all),
+            np.array(validation_embeddings_pca),
+            np.array(validation_embeddings_relief),
             np.array(validation_labels)
         ],
         [
             np.array(test_features_all),
             np.array(test_features_pca),
             np.array(test_features_relief),
-            np.array(test_embeddings),
+            np.array(test_embeddings_all),
+            np.array(test_embeddings_pca),
+            np.array(test_embeddings_relief),
             np.array(test_labels)
         ]
     ]

@@ -54,7 +54,7 @@ def partA ():
     # --- Exercise 4.3: PCA ---
 
     n_components = 36
-    pca, explained_variance_ratio = compute_pca(features, n_components)
+    pca, explained_variance_ratio, _ = compute_pca(features, n_components)
 
     # --- Exercise 4.4: PCA Analysis ---
 

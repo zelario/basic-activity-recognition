@@ -196,7 +196,7 @@ def _extract_window_features(signal):
     return feature_values
 
 
-def zscore_normalization(features, eps=1e-12):
+def zscore_normalization(features, mean_values=None, std_values=None, return_parameters=False):
     """
     Column-wise z-score normalization of feature matrix.
 
@@ -204,8 +204,12 @@ def zscore_normalization(features, eps=1e-12):
     ----------
     features : np.ndarray, shape (n_samples, n_features)
         Numeric feature matrix.
-    eps : float, optional
-        Threshold for near-zero std deviation (default=1e-12).
+    mean_values : np.ndarray or None, optional
+        Precomputed mean values for each feature (default=None).
+    std_values : np.ndarray or None, optional
+        Precomputed std deviation values for each feature (default=None).
+    return_parameters : bool, optional
+        If True, also return computed mean and std values (default=False).
 
     Returns
     -------
@@ -213,12 +217,19 @@ def zscore_normalization(features, eps=1e-12):
         Z-score normalized feature matrix.
     """
 
-    features = features.astype(float, copy=True)
-    mean_values = np.nanmean(features, axis=0)
-    std_values = np.nanstd(features, axis=0, ddof=1)
-    std_values = np.where(std_values < eps, 1.0, std_values)
-    features = (features - mean_values) / std_values
-    return features
+    if mean_values is not None and std_values is not None:
+        features = features.astype(float, copy=True)
+        features = (features - mean_values) / std_values
+    else:
+        mean_values = np.mean(features, axis=0)
+        std_values = np.std(features, axis=0, ddof=1)
+        std_values[std_values == 0] = 1.0  
+        features = (features - mean_values) / std_values
+
+    if return_parameters:
+        return features, mean_values, std_values
+    else:
+        return features
 
 
 def extract_features(dataset, variables_modules, window_duration=5.0, overlap_ratio=0.5):
@@ -278,9 +289,8 @@ def extract_features(dataset, variables_modules, window_duration=5.0, overlap_ra
 
 # --- Exercise 4.3: PCA ---
 
-def compute_pca(features, n_components=None):
-    """
-    Perform principal component analysis (PCA) and return projected data and explained variance ratio.
+def compute_pca(dataset, n_components=None, pca_object=None):
+    """Perform principal component analysis (PCA) and return projected data and explained variance ratio.
 
     Parameters
     ----------
@@ -288,23 +298,27 @@ def compute_pca(features, n_components=None):
         Input feature matrix.
     n_components : int or None, optional
         Number of principal components to compute. If None, uses min(features.shape).
+    pca_object : sklearn.decomposition.PCA or None
+        Pre-fitted PCA object to use for transformation (if transform=True).
+    transform : bool, optional
+        If False, fit PCA on features; if True, use pca_object to transform.
 
     Returns
     -------
-    pca : np.ndarray, shape (n_samples, n_components)
+    transformed : np.ndarray
         Transformed data (scores) for each sample.
-    explained_variance_ratio : np.ndarray
-        Variance ratio explained by each component.
-    """
-
-    n_components = n_components or min(features.shape)
-
-    pca_output = PCA(n_components=n_components)
-    pca = pca_output.fit_transform(features)
-
-    explained_variance_ratio = pca_output.explained_variance_ratio_
-
-    return pca, explained_variance_ratio
+    explained_variance_ratio : np.ndarray or None
+        Variance ratio explained by each component (None if transform=True)."""
+    
+    if pca_object is None:
+        n_components = n_components or min(dataset.shape)
+        pca_object = PCA(n_components=n_components)
+        pca = pca_object.fit_transform(dataset)
+        explained_variance_ratio = pca_object.explained_variance_ratio_
+        return pca, explained_variance_ratio, pca_object
+    else:
+        pca = pca_object.transform(dataset)
+        return pca
 
 # --- Exercise 4.4: PCA Analysis  ---
 
@@ -390,7 +404,7 @@ def fisher(features, labels):
         print_and_log(f"{i+1:02d}. {name:>20s}  |  score = {sorted_scores[i]:.4f}")
 
 
-def relief(features, labels, n_neighbors=50, n_samples=500, top_n=10, print_output=True):
+def relief(dataset, labels, n_neighbors=50, n_samples=500, top_n=10, print_output=True):
     """
     Approximate ReliefF feature ranking using random sampling.
 
@@ -416,10 +430,10 @@ def relief(features, labels, n_neighbors=50, n_samples=500, top_n=10, print_outp
         Indices of top n features sorted by ReliefF score.
     """
     
-    n_total = features.shape[0]
-    n_features = features.shape[1]
+    n_total = dataset.shape[0]
+    n_features = dataset.shape[1]
     sample_idx = np.random.choice(n_total, min(n_samples, n_total), replace=False)
-    X_sample = features[sample_idx]
+    X_sample = dataset[sample_idx]
     y_sample = np.array(labels)[sample_idx, 0]
 
     nominator = np.zeros(n_features)
@@ -445,7 +459,7 @@ def relief(features, labels, n_neighbors=50, n_samples=500, top_n=10, print_outp
     if print_output:
         print_and_log("\n========== ReliefF ==========")
         for rank, idx in enumerate(top_indices):
-            name = FEATURES_NAMES[idx] if FEATURES_NAMES else f"feature_{idx}"
+            name = FEATURES_NAMES[idx]
             print_and_log(f"{rank+1:02d}. {name:>20s}  |  score = {sorted_scores[rank]:.4f} (index {idx})")
 
     return top_indices
