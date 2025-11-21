@@ -112,7 +112,7 @@ def partB ():
 
     # --- Exercise 5.1: Hyperparameter Tuning ---
 
-    hyperparemeter_tuning(features, embeddings, labels, k_values=[1, 3, 5, 7, 11, 13, 17, 19], n_repeats=10)
+    hyperparemeter_tuning(features, embeddings, labels, k_values=[1, 3, 5, 7, 11, 13, 17, 19], n_splits=10)
 
 if __name__ == "__main__":
 

@@ -6,8 +6,8 @@ from features import zscore_normalization
 
 # --- Exercise 3.1: Mixed participant splitting ---
 
-def mixed_splitting(features, embeddings, labels, validation=True):
-    """Split features, embeddings, and labels into training, validation, and test sets using mixed participant splitting.
+def mixed_splitting(features, embeddings, labels, validate=True):
+    """Split features, embeddings, and labels into training, validate, and test sets using mixed participant splitting.
     Ensures consistent splits across all representations and stratifies by the first label column.
 
     Parameters
@@ -23,8 +23,8 @@ def mixed_splitting(features, embeddings, labels, validation=True):
     -------
     train_dataset : tuple
         (features, embeddings, labels) for training set.
-    validation_dataset : tuple or None
-        (features, embeddings, labels) for validation set, or None if validation=False.
+    validate_dataset : tuple or None
+        (features, embeddings, labels) for validate set, or None if validate=False.
     test_dataset : tuple
         (features, embeddings, labels) for test set."""
 
@@ -33,27 +33,27 @@ def mixed_splitting(features, embeddings, labels, validation=True):
         features, embeddings, labels, test_size=0.2, random_state=None, stratify=labels[:, 0]
     )
 
-    if validation:
+    if validate:
 
         # Second split: Train and Val
-        train_features, val_features, train_embeddings, validation_embeddings, train_labels, validation_labels = train_test_split(
+        train_features, val_features, train_embeddings, validate_embeddings, train_labels, validate_labels = train_test_split(
             train_val_features, train_val_embeddings, train_val_labels, test_size=0.2, random_state=None, stratify=train_val_labels[:, 0]
         )
         train_dataset = np.array(train_features), np.array(train_embeddings), np.array(train_labels)
-        validation_dataset = np.array(val_features), np.array(validation_embeddings), np.array(validation_labels)
+        validate_dataset = np.array(val_features), np.array(validate_embeddings), np.array(validate_labels)
     else:
 
         train_dataset = np.array(train_val_features), np.array(train_val_embeddings), np.array(train_val_labels)
-        validation_dataset = None
+        validate_dataset = None
 
     test_dataset = np.array(test_features), np.array(test_embeddings), np.array(test_labels)
 
-    return train_dataset, validation_dataset, test_dataset
+    return train_dataset, validate_dataset, test_dataset
 
 # --- Exercise 3.2: Participant-based splitting ---
 
-def participant_splitting(features, embeddings, labels, train_n=9, validation_n=3, test_n=3, validation=True):
-    """Split features, embeddings, and labels into training, validation, and test sets by participant groups.
+def participant_splitting(features, embeddings, labels, train_n=9, validate_n=3, test_n=3, validate=True):
+    """Split features, embeddings, and labels into training, validate, and test sets by participant groups.
     Ensures no data leakage between sets by assigning unique participants to each split.
 
     Parameters
@@ -66,19 +66,19 @@ def participant_splitting(features, embeddings, labels, train_n=9, validation_n=
         Labels array for all windows. Assumes participant ID is in column 1.
     train_n : int, optional
         Number of participants in training set (default=9).
-    validation_n : int, optional
-        Number of participants in validation set (default=3).
+    validate_n : int, optional
+        Number of participants in validate set (default=3).
     test_n : int, optional
         Number of participants in test set (default=3).
-    validation : bool, optional
-        Whether to create a validation split (default=True).
+    validate : bool, optional
+        Whether to create a validate split (default=True).
 
     Returns
     -------
     train_dataset : tuple
         (features, embeddings, labels) for training set.
-    validation_dataset : tuple or None
-        (features, embeddings, labels) for validation set, or None if validation=False.
+    validate_dataset : tuple or None
+        (features, embeddings, labels) for validate set, or None if validate=False.
     test_dataset : tuple
         (features, embeddings, labels) for test set."""
 
@@ -86,27 +86,27 @@ def participant_splitting(features, embeddings, labels, train_n=9, validation_n=
     participants = np.unique(labels[:, 1])
     participants_shuffled = random.permutation(participants)
 
-    if validation:
+    if validate:
 
-        # Split participants into Train, Validation, and Test
+        # Split participants into Train, validate, and Test
         train_participants = participants_shuffled[:train_n]
-        validation_participants = participants_shuffled[train_n:train_n+validation_n]
-        test_participants = participants_shuffled[train_n+validation_n:train_n+validation_n+test_n]
+        validate_participants = participants_shuffled[train_n:train_n+validate_n]
+        test_participants = participants_shuffled[train_n+validate_n:train_n+validate_n+test_n]
 
         # Create masks for each split
         train_mask = np.isin(labels[:, 1], train_participants)
-        validation_mask = np.isin(labels[:, 1], validation_participants)
+        validate_mask = np.isin(labels[:, 1], validate_participants)
         test_mask = np.isin(labels[:, 1], test_participants)
 
         # Create datasets
         train_dataset = np.array(features[train_mask]), np.array(embeddings[train_mask]), np.array(labels[train_mask])
-        validation_dataset = np.array(features[validation_mask]), np.array(embeddings[validation_mask]), np.array(labels[validation_mask])
+        validate_dataset = np.array(features[validate_mask]), np.array(embeddings[validate_mask]), np.array(labels[validate_mask])
         test_dataset = np.array(features[test_mask]), np.array(embeddings[test_mask]), np.array(labels[test_mask])
     else:
 
         # Split participants into Train and Test
-        train_participants = participants_shuffled[:train_n+validation_n]
-        test_participants = participants_shuffled[train_n+validation_n:train_n+validation_n+test_n]
+        train_participants = participants_shuffled[:train_n+validate_n]
+        test_participants = participants_shuffled[train_n+validate_n:train_n+validate_n+test_n]
 
         # Create masks for each split
         train_mask = np.isin(labels[:, 1], train_participants)
@@ -114,10 +114,10 @@ def participant_splitting(features, embeddings, labels, train_n=9, validation_n=
 
         # Create datasets
         train_dataset = np.array(features[train_mask]), np.array(embeddings[train_mask]), np.array(labels[train_mask])
-        validation_dataset = None
+        validate_dataset = None
         test_dataset = np.array(features[test_mask]), np.array(embeddings[test_mask]), np.array(labels[test_mask])
 
-    return train_dataset, validation_dataset, test_dataset
+    return train_dataset, validate_dataset, test_dataset
 
 # --- Exercise 3.3: Discussion on splitting strategies ---
 
@@ -134,20 +134,20 @@ que o modelo se beneficie de padrões individuais presentes no treino.'''
 
 # --- Exercise 3.4: Pipeline preparation ---
 
-def prepare_pipeline(train_dataset, validation_dataset, test_dataset):
-    """Prepare three feature transformation scenarios for train, validation, and test sets:
+def prepare_pipeline(train_dataset, validate_dataset, test_dataset):
+    """Prepare three feature transformation scenarios for train, validate, and test sets:
       a) All features/embeddings (no transformation)
       b) PCA-reduced features (retain 90% variance, fit on train only)
       c) ReliefF-selected top 15 features (fit on train only)
 
-    All transformations (PCA, ReliefF) are fit ONLY on the training set and applied to validation and test sets.
+    All transformations (PCA, ReliefF) are fit ONLY on the training set and applied to validate and test sets.
 
     Parameters
     ----------
     train_dataset : tuple
         (features, embeddings, labels) for training set.
-    validation_dataset : tuple
-        (features, embeddings, labels) for validation set.
+    validate_dataset : tuple
+        (features, embeddings, labels) for validate set.
     test_dataset : tuple
         (features, embeddings, labels) for test set.
 
@@ -161,7 +161,7 @@ def prepare_pipeline(train_dataset, validation_dataset, test_dataset):
 
     # Unpack datasets
     train_features_all, train_embeddings_all, train_labels = train_dataset
-    validation_features_all, validation_embeddings_all, validation_labels = validation_dataset
+    validate_features_all, validate_embeddings_all, validate_labels = validate_dataset
     test_features_all, test_embeddings_all, test_labels = test_dataset
 
     # === Scenario b: PCA-reduced features and embeddings (90% variance) ===
@@ -185,13 +185,16 @@ def prepare_pipeline(train_dataset, validation_dataset, test_dataset):
     train_features_pca = train_features_pca[:, :n_components_90_features]
     train_embeddings_pca = train_embeddings_pca[:, :n_components_90_embeddings]
 
-    # Apply normalization to validation set
-    normalized_validation_features = zscore_normalization(validation_features_all, mean_values=feature_means, std_values=feature_stds)
-    normalized_validation_embeddings = zscore_normalization(validation_embeddings_all, mean_values=embedding_means, std_values=embedding_stds)
+    # Apply normalization to validate set
+    normalized_validate_features = zscore_normalization(validate_features_all, mean_values=feature_means, std_values=feature_stds)
+    normalized_validate_embeddings = zscore_normalization(validate_embeddings_all, mean_values=embedding_means, std_values=embedding_stds)
 
-    # Project validation set using PCA fitted on training set
-    validation_features_pca = compute_pca(normalized_validation_features, n_components=n_components_90_features, pca_object=pca_object_features)
-    validation_embeddings_pca = compute_pca(normalized_validation_embeddings, n_components=n_components_90_embeddings, pca_object=pca_object_embeddings)
+    # Project validate set using PCA fitted on training set
+    validate_features_pca = compute_pca(normalized_validate_features, pca_object=pca_object_features)
+    validate_embeddings_pca = compute_pca(normalized_validate_embeddings, pca_object=pca_object_embeddings)
+
+    validate_features_pca = validate_features_pca[:, :n_components_90_features]
+    validate_embeddings_pca = validate_embeddings_pca[:, :n_components_90_embeddings]
 
     # Apply normalization to test set
     normalized_test_features = zscore_normalization(test_features_all, mean_values=feature_means, std_values=feature_stds)
@@ -209,11 +212,11 @@ def prepare_pipeline(train_dataset, validation_dataset, test_dataset):
 
     # Apply feature selection to all splits
     train_features_relief = train_features_all[:, top_15_features_indices]
-    validation_features_relief = validation_features_all[:, top_15_features_indices]
+    validate_features_relief = validate_features_all[:, top_15_features_indices]
     test_features_relief = test_features_all[:, top_15_features_indices]
 
     train_embeddings_relief = train_embeddings_all[:, top_15_embeddings_indices]
-    validation_embeddings_relief = validation_embeddings_all[:, top_15_embeddings_indices]
+    validate_embeddings_relief = validate_embeddings_all[:, top_15_embeddings_indices]
     test_embeddings_relief = test_embeddings_all[:, top_15_embeddings_indices]
 
     pipeline = [
@@ -227,13 +230,13 @@ def prepare_pipeline(train_dataset, validation_dataset, test_dataset):
             np.array(train_labels)
         ],
         [
-            np.array(validation_features_all),
-            np.array(validation_features_pca),
-            np.array(validation_features_relief),
-            np.array(validation_embeddings_all),
-            np.array(validation_embeddings_pca),
-            np.array(validation_embeddings_relief),
-            np.array(validation_labels)
+            np.array(validate_features_all),
+            np.array(validate_features_pca),
+            np.array(validate_features_relief),
+            np.array(validate_embeddings_all),
+            np.array(validate_embeddings_pca),
+            np.array(validate_embeddings_relief),
+            np.array(validate_labels)
         ],
         [
             np.array(test_features_all),

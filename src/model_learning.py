@@ -21,7 +21,7 @@ def knn_classifier(training_dataset, type="features", scenario='a', k=3):
     Returns
     -------
     predict : function
-        Function that takes a validation dataset and returns predictions."""
+        Function that takes a validate dataset and returns predictions."""
 
     scenario_indices = {'a': 0, 'b': 1, 'c': 2}
 
@@ -30,16 +30,16 @@ def knn_classifier(training_dataset, type="features", scenario='a', k=3):
     elif type == "embeddings":
         training_scenario_data = training_dataset[scenario_indices[scenario] + 3]
 
-    def predict(validation_dataset):
+    def predict(validate_dataset):
         prediction_labels = []
 
         if type == "features":
-            validation_scenario_data = validation_dataset[scenario_indices[scenario]]
+            validate_scenario_data = validate_dataset[scenario_indices[scenario]]
         elif type == "embeddings":
-            validation_scenario_data = validation_dataset[scenario_indices[scenario] + 3]
+            validate_scenario_data = validate_dataset[scenario_indices[scenario] + 3]
 
-        # For each sample in validation, find k nearest neighbors in training
-        for sample in validation_scenario_data:
+        # For each sample in validate, find k nearest neighbors in training
+        for sample in validate_scenario_data:
             distances = np.linalg.norm(training_scenario_data - sample, axis=1)
             nn_indices = np.argsort(distances)[:k]
             nn_labels = training_dataset[4][nn_indices, 0]
@@ -63,7 +63,7 @@ def sklearn_knn_classifier(training_dataset, type="features", scenario='a', k=3)
     Returns
     -------
     predict : function
-        Function that takes a validation dataset and returns predictions."""
+        Function that takes a validate dataset and returns predictions."""
 
     scenario_indices = {'a': 0, 'b': 1, 'c': 2}
     
@@ -73,30 +73,30 @@ def sklearn_knn_classifier(training_dataset, type="features", scenario='a', k=3)
         training_scenario_data = training_dataset[scenario_indices[scenario] + 3]
 
     model = KNeighborsClassifier(n_neighbors=k)
-    model.fit(training_scenario_data, training_dataset[4][:, 0])
+    model.fit(training_scenario_data, training_dataset[6][:, 0])
 
-    def predict(validation_dataset):
+    def predict(validate_dataset):
 
         if type == "features":
-            validation_scenario_data = validation_dataset[scenario_indices[scenario]]
+            validate_scenario_data = validate_dataset[scenario_indices[scenario]]
         elif type == "embeddings":
-            validation_scenario_data = validation_dataset[scenario_indices[scenario] + 3]
+            validate_scenario_data = validate_dataset[scenario_indices[scenario] + 3]
 
-        return model.predict(validation_scenario_data)
+        return model.predict(validate_scenario_data)
 
     return predict
 
 # --- Exercise 4.2: Classification Metrics ---
 
-def validate_model(knn_model, validation_dataset, k=3, print_output=True):
-    """Evaluate knn classifier on validation data.
+def validate_model(knn_model, validate_dataset, k=3, print_output=True):
+    """Evaluate knn classifier on validate data.
 
     Parameters
     ----------
     knn_model : function
         KNN model returned by knn_classifier.
-    validation_dataset : matrix 
-        Validation dataset containing all scenarios datasets.
+    validate_dataset : matrix 
+        validate dataset containing all scenarios datasets.
 
     Returns
     -------
@@ -104,8 +104,8 @@ def validate_model(knn_model, validation_dataset, k=3, print_output=True):
         Dictionary containing confusion matrix, accuracy, precision, recall, F1 score."""
 
     # Get predictions and true labels
-    predicted_labels = knn_model(validation_dataset)
-    true_labels = validation_dataset[4][:, 0]
+    predicted_labels = knn_model(validate_dataset)
+    true_labels = validate_dataset[6][:, 0]
     predicted_labels = np.array(predicted_labels)
 
     # Compute metrics

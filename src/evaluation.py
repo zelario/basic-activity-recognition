@@ -2,67 +2,78 @@ from log import print_and_log
 from model_learning import sklearn_knn_classifier, validate_model
 from splitting import mixed_splitting, participant_splitting, prepare_pipeline
 
-def hyperparemeter_tuning(features, embeddings, labels, k_values, n_repeats=1):
+def hyperparemeter_tuning(features, embeddings, labels, k_values=[1], n_splits=1):
 
     # Dictionary to store best k and its accuracy for each scenario and splitting method
     best_k_counts = {
-        (split, scenario): [] for split in ['mixed', 'participant'] for scenario in ['a', 'b', 'c']
+        (method, type, scenario, k): [] for method in ['mixed', 'participant'] for type in ['features', 'embeddings'] for scenario in ['a', 'b', 'c'] for k in k_values
     }
 
-    print_and_log(f"\n--- Hyperparameter Tuning over {n_repeats} repeats ---\n")
+    print_and_log(f"\n--- Hyperparameter Tuning over {n_splits} repeats ---\n")
 
     # For each splitting method
-    for split in ['mixed', 'participant']:
+    for method in ['mixed', 'participant']:
 
-        # For each scenario
-        for scenario in ['a', 'b', 'c']:
+        splits = [mixed_splitting(features, embeddings, labels) for _ in range(n_splits)] if method == 'mixed' else [participant_splitting(features, embeddings, labels) for _ in range(n_splits)]
 
-            # For each k value
-            for k in k_values:
-                accuracies = []
+        # For each data type
+        for type in ['features', 'embeddings']:
 
-                # Compute accuracy over n_repeats
-                for repeat in range(n_repeats):
+            # For each scenario
+            for scenario in ['a', 'b', 'c']:
 
-                    # Perform splitting based on the current method
-                    if split == 'mixed':
-                        train_dataset, validation_dataset, test_dataset = mixed_splitting(features, embeddings, labels)
-                    else:
-                        train_dataset, validation_dataset, test_dataset = participant_splitting(features, embeddings, labels)
-                    
-                    pipeline = prepare_pipeline(train_dataset, validation_dataset, test_dataset)
+                # For n_splits or number of splits
+                for i, split in enumerate(splits):
 
-                    knn_model = sklearn_knn_classifier(pipeline[0], scenario=scenario, k=k)
-                    metrics = validate_model(knn_model, pipeline[1], k=k, print_output=False)
+                    # Prepare dataset
+                    pipeline = prepare_pipeline(split[0], split[1], split[2])
 
-                    # Collect accuracy
-                    accuracy = metrics['accuracy']
-                    accuracies.append(accuracy)
-                    print_and_log(f"Split: {split}, Scenario: {scenario}, k={k}, repeat {repeat+1}, accuracy: {accuracy:.4f}")
+                    # For each k value
+                    for k in k_values:
 
-                # Store best k and its mean accuracy for this scenario/split
-                mean_accuracy = sum(accuracies) / len(accuracies)
-                best_k_counts[(split, scenario)].append([k, mean_accuracy])
+                        # Create KNN model
+                        knn_model = sklearn_knn_classifier(pipeline[0], scenario=scenario, type=type, k=k)
+
+                        # Validate model
+                        metrics = validate_model(knn_model, pipeline[1], k, print_output=False)
+                        accuracy = metrics['accuracy']
+
+                        # Store the k and its accuracy
+                        best_k_counts[(method, type, scenario, k)].append(accuracy)
+                        print_and_log(f"Method: {method}, Type: {type}, Scenario: {scenario}, Split= {i+1}, k= {k}, Accuracy: {accuracy:.4f}")
 
     best_overall_mean_accuracy = 0
     best_overall = None
 
-    print_and_log(f"\n--- Best k for each scenario and splitting method across {n_repeats} repeats ---")
-    for key, k_list in best_k_counts.items():
-        split, scenario = key
-        k_values_only = [item[0] for item in k_list]
-        accuracy_values_only = [item[1] for item in k_list]
-        best_idx = accuracy_values_only.index(max(accuracy_values_only)) 
-        best_k = k_values_only[best_idx]
-        best_mean_accuracy = accuracy_values_only[best_idx]
-        print_and_log(f"\nScenario {scenario}, {split} splitting: k = {best_k} (Mean Accuracy = {best_mean_accuracy:.4f})")
+    print_and_log(f"\n--- Best k for each method, type of data and scenario across {n_splits} splits ---")
+
+    # Aggregate and report best k for each (method, type, scenario)
+    best_overall_mean_accuracy = 0
+    best_overall = None
+
+    # Group keys by (method, type, scenario)
+    grouped = {}
+    for key in best_k_counts:
+        method, type, scenario, k = key
+        group_key = (method, type, scenario)
+        if group_key not in grouped:
+            grouped[group_key] = {}
+        grouped[group_key][k] = best_k_counts[key]
+
+    for group_key in grouped:
+        method, type, scenario = group_key
+        k_acc_dict = grouped[group_key]
+        k_mean_acc = {k: (sum(accs)/len(accs) if accs else 0) for k, accs in k_acc_dict.items()}
+        best_k = max(k_mean_acc, key=lambda k: k_mean_acc[k])
+        best_mean_accuracy = k_mean_acc[best_k]
+        print_and_log(f"\nMethod: {method}, Type: {type}, Scenario: {scenario} | Best k = {best_k}, Mean Accuracy = {best_mean_accuracy:.4f}")
 
         # Track best overall mean accuracy
         if best_mean_accuracy > best_overall_mean_accuracy:
             best_overall_mean_accuracy = best_mean_accuracy
-            best_overall = (split, scenario, best_k)
+            best_overall = (method, type, scenario, best_k)
 
-
-    split, scenario, best_k = best_overall
+    # Report best overall
+    method, type, scenario, best_k = best_overall
     print_and_log(f"\n--- Best overall mean accuracy ---\n")
-    print_and_log(f"Best mean accuracy: {best_overall_mean_accuracy:.4f} (k={best_k}, split={split}, scenario={scenario})")
+    print_and_log(f"Best mean accuracy: {best_overall_mean_accuracy:.4f} (k={best_k}, method={method}, type={type}, scenario={scenario})")
