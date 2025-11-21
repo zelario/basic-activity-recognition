@@ -44,7 +44,7 @@ def mixed_splitting(features, embeddings, labels, validate=True):
     else:
 
         train_dataset = np.array(train_val_features), np.array(train_val_embeddings), np.array(train_val_labels)
-        validate_dataset = None
+        validate_dataset = np.array([]), np.array([]), np.array([])
 
     test_dataset = np.array(test_features), np.array(test_embeddings), np.array(test_labels)
 
@@ -114,7 +114,7 @@ def participant_splitting(features, embeddings, labels, train_n=9, validate_n=3,
 
         # Create datasets
         train_dataset = np.array(features[train_mask]), np.array(embeddings[train_mask]), np.array(labels[train_mask])
-        validate_dataset = None
+        validate_dataset = np.array([]), np.array([]), np.array([])
         test_dataset = np.array(features[test_mask]), np.array(embeddings[test_mask]), np.array(labels[test_mask])
 
     return train_dataset, validate_dataset, test_dataset
@@ -134,7 +134,7 @@ que o modelo se beneficie de padrões individuais presentes no treino.'''
 
 # --- Exercise 3.4: Pipeline preparation ---
 
-def prepare_pipeline(train_dataset, validate_dataset, test_dataset):
+def prepare_pipeline(train_dataset, validate_dataset, test_dataset, validate=True):
     """Prepare three feature transformation scenarios for train, validate, and test sets:
       a) All features/embeddings (no transformation)
       b) PCA-reduced features (retain 90% variance, fit on train only)
@@ -186,15 +186,20 @@ def prepare_pipeline(train_dataset, validate_dataset, test_dataset):
     train_embeddings_pca = train_embeddings_pca[:, :n_components_90_embeddings]
 
     # Apply normalization to validate set
-    normalized_validate_features = zscore_normalization(validate_features_all, mean_values=feature_means, std_values=feature_stds)
-    normalized_validate_embeddings = zscore_normalization(validate_embeddings_all, mean_values=embedding_means, std_values=embedding_stds)
+    if validate:
+        normalized_validate_features = zscore_normalization(validate_features_all, mean_values=feature_means, std_values=feature_stds)
+        normalized_validate_embeddings = zscore_normalization(validate_embeddings_all, mean_values=embedding_means, std_values=embedding_stds)
+    
+        # Project validate set using PCA fitted on training set
+        validate_features_pca = compute_pca(normalized_validate_features, pca_object=pca_object_features)
+        validate_embeddings_pca = compute_pca(normalized_validate_embeddings, pca_object=pca_object_embeddings)
 
-    # Project validate set using PCA fitted on training set
-    validate_features_pca = compute_pca(normalized_validate_features, pca_object=pca_object_features)
-    validate_embeddings_pca = compute_pca(normalized_validate_embeddings, pca_object=pca_object_embeddings)
-
-    validate_features_pca = validate_features_pca[:, :n_components_90_features]
-    validate_embeddings_pca = validate_embeddings_pca[:, :n_components_90_embeddings]
+        validate_features_pca = validate_features_pca[:, :n_components_90_features]
+        validate_embeddings_pca = validate_embeddings_pca[:, :n_components_90_embeddings]
+    
+    else:
+        validate_features_pca = np.array([])
+        validate_embeddings_pca = np.array([])
 
     # Apply normalization to test set
     normalized_test_features = zscore_normalization(test_features_all, mean_values=feature_means, std_values=feature_stds)
@@ -212,11 +217,17 @@ def prepare_pipeline(train_dataset, validate_dataset, test_dataset):
 
     # Apply feature selection to all splits
     train_features_relief = train_features_all[:, top_15_features_indices]
-    validate_features_relief = validate_features_all[:, top_15_features_indices]
+    if validate:
+        validate_features_relief = validate_features_all[:, top_15_features_indices]
+    else:
+        validate_features_relief = np.array([])
     test_features_relief = test_features_all[:, top_15_features_indices]
 
     train_embeddings_relief = train_embeddings_all[:, top_15_embeddings_indices]
-    validate_embeddings_relief = validate_embeddings_all[:, top_15_embeddings_indices]
+    if validate:
+        validate_embeddings_relief = validate_embeddings_all[:, top_15_embeddings_indices]
+    else:
+        validate_embeddings_relief = np.array([])
     test_embeddings_relief = test_embeddings_all[:, top_15_embeddings_indices]
 
     pipeline = [

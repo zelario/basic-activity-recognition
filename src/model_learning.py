@@ -88,7 +88,7 @@ def sklearn_knn_classifier(training_dataset, type="features", scenario='a', k=3)
 
 # --- Exercise 4.2: Classification Metrics ---
 
-def validate_model(knn_model, validate_dataset, k=3, print_output=True):
+def validate_model(knn_model, validate_dataset, k=3, print_output=True, scenario=None, type=None, method=None):
     """Evaluate knn classifier on validate data.
 
     Parameters
@@ -125,26 +125,26 @@ def validate_model(knn_model, validate_dataset, k=3, print_output=True):
 
     if print_output:
 
-        print_and_log(f"\n--- Validation Metrics for k = {k} ---\n")
+        print_and_log(f"\n--- Validation Metrics for Method: {method}, Type: {type}, Scenario: {scenario}, k = {k} ---\n", path="log/validation_metrics.log")
 
         # Print confusion matrix with labels on axes
-        print_and_log("Confusion Matrix:\n")
-        print_and_log("         PREDICTED")
-        print_and_log("      ", end="")
+        print_and_log("Confusion Matrix:\n", path="log/validation_metrics.log")
+        print_and_log("         PREDICTED", path="log/validation_metrics.log")
+        print_and_log("      ", end="", path="log/validation_metrics.log")
         for lbl in range(1, 8):
-            print_and_log(f"{lbl:>5}", end="")
-        print_and_log()
+            print_and_log(f"{lbl:>5}", end="", path="log/validation_metrics.log")
+        print_and_log(path="log/validation_metrics.log")
         real_label = "REAL"
         for row_idx, row in enumerate(confusion):
             letter = real_label[row_idx] if row_idx < len(real_label) else " "
-            print_and_log(f"  {letter}  {row_idx+1:>2} ", end="")
+            print_and_log(f"  {letter}  {row_idx+1:>2} ", end="", path="log/validation_metrics.log")
             for val in row:
-                print_and_log(f"{val:>5}", end="")
-            print_and_log()
+                print_and_log(f"{val:>5}", end="", path="log/validation_metrics.log")
+            print_and_log(path="log/validation_metrics.log")
             
-        print_and_log(f"\nAccuracy:  {accuracy:.4f}")
-        print_and_log(f"Precision: {precision:.4f}")
-        print_and_log(f"Recall:    {recall:.4f}")
-        print_and_log(f"F1 Score:  {f1:.4f}")
+        print_and_log(f"\nAccuracy:  {accuracy:.4f}", path="log/validation_metrics.log")
+        print_and_log(f"Precision: {precision:.4f}", path="log/validation_metrics.log")
+        print_and_log(f"Recall:    {recall:.4f}", path="log/validation_metrics.log")
+        print_and_log(f"F1 Score:  {f1:.4f}", path="log/validation_metrics.log")
 
     return metrics

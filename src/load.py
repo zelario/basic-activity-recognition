@@ -82,7 +82,7 @@ def reload_data():
 	try:
 		dataset = np.load("npy/dataset.npy", allow_pickle=True)
 		features = np.load("npy/features.npy", allow_pickle=True)
-		labels = np.load("npy/labels.npy", allow_pickle=True)
+		labels = np.load("npy/feature_labels.npy", allow_pickle=True)
 
 	except FileNotFoundError:
 		dataset = load_data()
@@ -92,6 +92,6 @@ def reload_data():
 
 		np.save("npy/dataset.npy", dataset)
 		np.save("npy/features.npy", features)
-		np.save("npy/labels.npy", labels)
+		np.save("npy/feature_labels.npy", labels)
 
 	return dataset, features, labels
