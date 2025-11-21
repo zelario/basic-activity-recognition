@@ -34,7 +34,6 @@ def mixed_splitting(features, embeddings, labels, validate=True):
     )
 
     if validate:
-
         # Second split: Train and Val
         train_features, val_features, train_embeddings, validate_embeddings, train_labels, validate_labels = train_test_split(
             train_val_features, train_val_embeddings, train_val_labels, test_size=0.2, random_state=None, stratify=train_val_labels[:, 0]
@@ -42,7 +41,6 @@ def mixed_splitting(features, embeddings, labels, validate=True):
         train_dataset = np.array(train_features), np.array(train_embeddings), np.array(train_labels)
         validate_dataset = np.array(val_features), np.array(validate_embeddings), np.array(validate_labels)
     else:
-
         train_dataset = np.array(train_val_features), np.array(train_val_embeddings), np.array(train_val_labels)
         validate_dataset = np.array([]), np.array([]), np.array([])
 
@@ -87,7 +85,6 @@ def participant_splitting(features, embeddings, labels, train_n=9, validate_n=3,
     participants_shuffled = random.permutation(participants)
 
     if validate:
-
         # Split participants into Train, validate, and Test
         train_participants = participants_shuffled[:train_n]
         validate_participants = participants_shuffled[train_n:train_n+validate_n]
@@ -103,7 +100,6 @@ def participant_splitting(features, embeddings, labels, train_n=9, validate_n=3,
         validate_dataset = np.array(features[validate_mask]), np.array(embeddings[validate_mask]), np.array(labels[validate_mask])
         test_dataset = np.array(features[test_mask]), np.array(embeddings[test_mask]), np.array(labels[test_mask])
     else:
-
         # Split participants into Train and Test
         train_participants = participants_shuffled[:train_n+validate_n]
         test_participants = participants_shuffled[train_n+validate_n:train_n+validate_n+test_n]

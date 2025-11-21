@@ -15,7 +15,7 @@ def hyperparemeter_tuning(features, embeddings, labels, k_values=[1], n_splits=1
     # For each splitting method
     for method in ['mixed', 'participant']:
 
-        splits = [mixed_splitting(features, embeddings, labels) for _ in range(n_splits)] if method == 'mixed' else [participant_splitting(features, embeddings, labels) for _ in range(n_splits)]
+        splits = [mixed_splitting(features, embeddings, labels, validate=True) for _ in range(n_splits)] if method == 'mixed' else [participant_splitting(features, embeddings, labels, validate=True) for _ in range(n_splits)]
 
         # For each data type
         for type in ['features', 'embeddings']:
@@ -27,7 +27,7 @@ def hyperparemeter_tuning(features, embeddings, labels, k_values=[1], n_splits=1
                 for i, split in enumerate(splits):
 
                     # Prepare dataset
-                    pipeline = prepare_pipeline(split[0], split[1], split[2])
+                    pipeline = prepare_pipeline(split[0], split[1], split[2], validate=True)
 
                     # For each k value
                     for k in k_values:
@@ -86,12 +86,12 @@ def models_evaluation(features, embeddings, labels, best_k, n_splits=1):
             # For each scenario
             for scenario in ['a', 'b', 'c']:
 
-                k = best_k.get(method, type, scenario)[0]
+                k = best_k.get((method, type, scenario), (None,))[0]
 
                 # For n_splits
                 for i, split in enumerate(splits):
 
-                    pipeline = prepare_pipeline(split[0], split[1], split[2])
+                    pipeline = prepare_pipeline(split[0], split[1], split[2], validate=False)
 
                     knn_model = sklearn_knn_classifier(pipeline[0], scenario=scenario, type=type, k=k)
 
@@ -101,6 +101,7 @@ def models_evaluation(features, embeddings, labels, best_k, n_splits=1):
                         method, type, scenario, i+1, k,
                         iteration_metrics['accuracy'], iteration_metrics['precision'], iteration_metrics['recall'], iteration_metrics['f1_score']
                     ])
+                    
                     print_and_log(f"Method: {method}, Type: {type}, Scenario: {scenario}, Split= {i+1}, k= {k}, Accuracy: {iteration_metrics['accuracy']:.4f}", path="log/hyperparameter_tuning.log")
 
     metrics = np.array(metrics, dtype=object)
