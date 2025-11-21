@@ -6,7 +6,7 @@ from sklearn.neighbors import KNeighborsClassifier
 
 # ---Exercise 4.1: K Nearest Neighbors---
 
-def knn_classifier(training_dataset, scenario='a', k=3):  #TODO aqui os cenarios é base mais embeddings?
+def knn_classifier(training_dataset, type="features", scenario='a', k=3):
     """Returns a knn model trained on the selected scenario.
     
     Parameters
@@ -23,26 +23,20 @@ def knn_classifier(training_dataset, scenario='a', k=3):  #TODO aqui os cenarios
     predict : function
         Function that takes a validation dataset and returns predictions."""
 
-    # Combine scenario dataset and embeddings for each scenario
-    def combine(scenario_dataset, embeddings):
-        return np.concatenate([scenario_dataset, embeddings], axis=1)
+    scenario_indices = {'a': 0, 'b': 1, 'c': 2}
 
-    if scenario == 'a':
-        training_scenario_data = combine(training_dataset[0], training_dataset[3])
-    elif scenario == 'b':
-        training_scenario_data = combine(training_dataset[1], training_dataset[3])
-    elif scenario == 'c':
-        training_scenario_data = combine(training_dataset[2], training_dataset[3])
+    if type == "features":
+        training_scenario_data = training_dataset[scenario_indices[scenario]]
+    elif type == "embeddings":
+        training_scenario_data = training_dataset[scenario_indices[scenario] + 3]
 
     def predict(validation_dataset):
         prediction_labels = []
 
-        if scenario == 'a':
-            validation_scenario_data = combine(validation_dataset[0], validation_dataset[3])
-        elif scenario == 'b':
-            validation_scenario_data = combine(validation_dataset[1], validation_dataset[3])
-        elif scenario == 'c':
-            validation_scenario_data = combine(validation_dataset[2], validation_dataset[3])
+        if type == "features":
+            validation_scenario_data = validation_dataset[scenario_indices[scenario]]
+        elif type == "embeddings":
+            validation_scenario_data = validation_dataset[scenario_indices[scenario] + 3]
 
         # For each sample in validation, find k nearest neighbors in training
         for sample in validation_scenario_data:
@@ -54,7 +48,7 @@ def knn_classifier(training_dataset, scenario='a', k=3):  #TODO aqui os cenarios
         return np.array(prediction_labels)
     return predict
 
-def sklearn_knn_classifier(training_dataset, scenario='a', k=3):
+def sklearn_knn_classifier(training_dataset, type="features", scenario='a', k=3):
     """Returns a knn model trained on the selected scenario using scikit-learn's KNeighborsClassifier.
     
     Parameters
@@ -71,27 +65,23 @@ def sklearn_knn_classifier(training_dataset, scenario='a', k=3):
     predict : function
         Function that takes a validation dataset and returns predictions."""
 
-    def combine(scenario_dataset, embeddings):
-        return np.concatenate([scenario_dataset, embeddings], axis=1)
-
-    if scenario == 'a':
-        train_scenario_data = combine(training_dataset[0], training_dataset[3])
-    elif scenario == 'b':
-        train_scenario_data = combine(training_dataset[1], training_dataset[3])
-    elif scenario == 'c':
-        train_scenario_data = combine(training_dataset[2], training_dataset[3])
-    train_labels = training_dataset[4][:, 0]
+    scenario_indices = {'a': 0, 'b': 1, 'c': 2}
+    
+    if type == "features":
+        training_scenario_data = training_dataset[scenario_indices[scenario]]
+    elif type == "embeddings":
+        training_scenario_data = training_dataset[scenario_indices[scenario] + 3]
 
     model = KNeighborsClassifier(n_neighbors=k)
-    model.fit(train_scenario_data, train_labels)
+    model.fit(training_scenario_data, training_dataset[4][:, 0])
 
     def predict(validation_dataset):
-        if scenario == 'a':
-            validation_scenario_data = combine(validation_dataset[0], validation_dataset[3])
-        elif scenario == 'b':
-            validation_scenario_data = combine(validation_dataset[1], validation_dataset[3])
-        elif scenario == 'c':
-            validation_scenario_data = combine(validation_dataset[2], validation_dataset[3])
+
+        if type == "features":
+            validation_scenario_data = validation_dataset[scenario_indices[scenario]]
+        elif type == "embeddings":
+            validation_scenario_data = validation_dataset[scenario_indices[scenario] + 3]
+
         return model.predict(validation_scenario_data)
 
     return predict
