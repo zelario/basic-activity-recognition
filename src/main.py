@@ -1,4 +1,4 @@
-from evaluation import hyperparemeter_tuning, models_evaluation
+from evaluation import *
 from log import *
 from load import *
 from outliers import *
@@ -112,10 +112,8 @@ def partB ():
 
     # --- Exercise 5.1: Hyperparameter Tuning ---
 
-    #hyperparemeter_tuning(features, embeddings, labels, k_values=[1, 3, 5, 7, 11, 13, 17, 19], n_splits=10)
+    hyperparemeter_tuning(features, embeddings, labels, k_values=[1, 3, 5, 7, 11, 13, 17, 19], n_splits=10)
 
-    best_k = np.load("npy/best_k.npy", allow_pickle=True).item()
-    models_evaluation(features, embeddings, labels, best_k, n_splits=10)
 
 if __name__ == "__main__":
 
