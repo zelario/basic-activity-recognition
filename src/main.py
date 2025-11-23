@@ -75,12 +75,13 @@ def partB ():
 
     dataset, features, labels = reload_data()
     features, labels = discard_activities(features=features, labels=labels)
+    features, labels = augment_dataset(features, labels)
     
-    '''# --- Exercise 1.1: Analyse sample balance ---
+    # --- Exercise 1.1: Analyse sample balance ---
 
     analyze_activity_balance(labels)
 
-    # --- Exercise 1.2: Data Augmentation with SMOTE ---
+    '''# --- Exercise 1.2: Data Augmentation with SMOTE ---
 
     synthetic_features = augment_activity_data(features, labels)
 
@@ -92,6 +93,7 @@ def partB ():
 
     embeddings, embedding_labels = compute_embeddings(dataset, fs=51.5, window_duration=5.0, overlap_ratio=0.5)
     embeddings, embedding_labels = discard_activities(embeddings=embeddings, labels=embedding_labels)
+    embeddings, embedding_labels = augment_dataset(embeddings, embedding_labels)
 
     check_pairing(embeddings, features, labels, embedding_labels)
 
@@ -125,7 +127,7 @@ if __name__ == "__main__":
 
     #--- Run Part A Exercises ---
 
-    partA()
+    '''partA()'''
 
     #--- Run Part B Exercises ---
 

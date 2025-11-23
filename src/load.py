@@ -14,7 +14,7 @@ Column conventions expected in loaded arrays:
 
 from log import print_and_log
 from features import extract_features
-from outliers import compute_modules
+from outliers import compute_modules, remove_outliers
 import numpy as np
 import csv
 
@@ -105,6 +105,7 @@ def reload_data():
 	except FileNotFoundError:
 		dataset = load_data()
 		variables_modules = compute_modules(dataset)
+		dataset = remove_outliers(dataset, variables_modules)
 
 		features, labels = extract_features(dataset, variables_modules, window_duration=5.0, overlap_ratio=0.5)
 

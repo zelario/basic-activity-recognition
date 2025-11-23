@@ -21,6 +21,7 @@ from log import *
 import numpy as np
 import matplotlib.pyplot as plt
 from sklearn.neighbors import NearestNeighbors
+from imblearn.over_sampling import SMOTE
 
 # --- Pre Game ---
 
@@ -78,6 +79,8 @@ def analyze_activity_balance(labels):
 	for activity, count in zip(unique, counts):
 		print_and_log(f"Activity {activity}: {count} samples")
 
+# --- Exercise 1.2: Data Augmentation with SMOTE ---
+
 def augment_activity_data(features, labels, activity=4, participant=3, n_samples=3):
 	"""
 	Generate synthetic samples for a specific activity using SMOTE-like interpolation.
@@ -126,6 +129,37 @@ def augment_activity_data(features, labels, activity=4, participant=3, n_samples
 	synthetic_features = np.array(synthetic_features)
 
 	return synthetic_features
+
+def augment_dataset(dataset, labels):
+	"""
+	Augment the entire dataset (features or embeddings) using SMOTE to balance activity classes.
+
+	Parameters
+	----------
+	dataset : np.ndarray
+		Feature or embedding matrix (n_samples, n_features or n_embedding_features).
+	labels : np.ndarray
+		Label matrix (n_samples, 2): column 0 is activity, column 1 is participant.
+
+	Returns
+	-------
+	augmented_array : np.ndarray
+		Augmented feature or embedding matrix after SMOTE.
+	augmented_labels : np.ndarray
+		Corresponding labels for augmented samples.
+	"""
+	smote = SMOTE()
+	augmented_dataset, augmented_activity_labels = smote.fit_resample(dataset, labels[:, 0])
+
+	# Reconstruct labels with participant IDs (assigning -1 for synthetic samples)
+	synthetic_participant_ids = -1 * np.ones((augmented_activity_labels.shape[0] - labels.shape[0], 1), dtype=int)
+	original_participant_ids = labels[:, 1].reshape(-1, 1)
+	augmented_participant_ids = np.vstack((original_participant_ids, synthetic_participant_ids))
+	augmented_labels = np.hstack((augmented_activity_labels.reshape(-1, 1), augmented_participant_ids))
+
+	return augmented_dataset, augmented_labels
+
+# --- Exercise 1.3: Visualize Synthetic vs Real Samples ---
 
 def plot_synthetic_vs_real(features, labels, synthetic_features, activity=4, participant=3):
 	"""
