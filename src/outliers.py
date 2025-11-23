@@ -148,6 +148,45 @@ def outlier_density_iqr(dataset, variables_modules):
             densities[idx] = density
             print_and_log(f"Activity {act}: {density:.2f}% ({np.sum(outliers)}/{act_modules.size})")
 
+def remove_outliers(dataset, variables_modules, k=3):
+    """
+    Remove z-score outliers from the dataset for all variable modules.
+
+    Parameters
+    ----------
+    dataset : np.ndarray, shape (n_samples, 13)
+        Raw dataset matrix.
+    variables_modules : list of (str, np.ndarray)
+        List of (name, modules) for Acc, Gyro, Mag vector magnitudes.
+    k : float
+        Z-score threshold for outlier detection.
+
+    Returns
+    -------
+    cleaned_dataset : np.ndarray
+        Dataset with outlier samples removed.
+    """
+    
+    outlier_mask = np.zeros(dataset.shape[0], dtype=bool)
+
+    for variable_modules in variables_modules:
+        for activity in range(1, 17):
+            activity_mask = dataset[:, 11] == activity
+            activity_idxs = np.where(activity_mask)[0]
+            activity_data = variable_modules[activity_mask]
+            q1, q3 = np.percentile(activity_data, [25, 75])
+            iqr = q3 - q1
+            lower = q1 - 1.5 * iqr
+            upper = q3 + 1.5 * iqr
+            outlier_idxs = np.where((activity_data < lower) | (activity_data > upper))[0]
+            full_outlier_idxs = activity_idxs[outlier_idxs]
+            outlier_mask[full_outlier_idxs] = True
+
+    # Remove outliers from dataset and all variable modules
+    cleaned_dataset = dataset[~outlier_mask]
+    cleaned_modules = [variable_modules[~outlier_mask] for variable_modules in variables_modules]
+    return cleaned_dataset, cleaned_modules
+
 # --- Exercise 3.3 and 3.4: Outlier Detection via Z-Score ---
 
 def outlier_density_z_score(dataset, variables_modules, k):
@@ -252,39 +291,6 @@ def plot_zscore_outliers(dataset, variables_modules, k):
         plt.ylabel("Variable")
         plt.legend()
         plt.show()
-
-def remove_outliers(dataset, variables_modules, k):
-    """
-    Remove z-score outliers from the dataset for all variable modules.
-
-    Parameters
-    ----------
-    dataset : np.ndarray, shape (n_samples, 13)
-        Raw dataset matrix.
-    variables_modules : list of (str, np.ndarray)
-        List of (name, modules) for Acc, Gyro, Mag vector magnitudes.
-    k : float
-        Z-score threshold for outlier detection.
-
-    Returns
-    -------
-    cleaned_dataset : np.ndarray
-        Dataset with outlier samples removed.
-    """
-    
-    outlier_mask = np.zeros(dataset.shape[0], dtype=bool)
-
-    for variable_modules in variables_modules:
-        for activity in range(1, 17):
-            activity_mask = dataset[:, 11] == activity
-            activity_outlier_idxs = _z_score_indices(dataset, variable_modules, activity, k=k)
-            full_outlier_idxs = np.where(activity_mask)[0][activity_outlier_idxs]
-            outlier_mask[full_outlier_idxs] = True
-
-    # Remove outliers from dataset and all variable modules
-    cleaned_dataset = dataset[~outlier_mask]
-    cleaned_modules = [variable_modules[~outlier_mask] for variable_modules in variables_modules]
-    return cleaned_dataset, cleaned_modules
 
 # --- Exercise 3.6 and 3.7: Clustering ---
 
