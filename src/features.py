@@ -18,6 +18,7 @@ Column conventions expected in `dataset` arrays used by windowing functions:
 """
 
 from log import print_and_log
+from outliers import *
 import numpy as np
 import matplotlib.pyplot as plt
 from scipy.stats import kstest, f_oneway, kruskal
@@ -52,7 +53,7 @@ def normality_and_significance(dataset, variables_modules, alpha=0.05):
     """
 
     print_and_log("--- Normality and Significance Tests ---")
-    for name, modules in variables_modules:
+    for name, modules in zip(VARIABLE_NAMES, variables_modules):
         print_and_log(f"\n--- Variable: {name} ---\n")
 
         normality_results = {}
@@ -195,6 +196,60 @@ def _extract_window_features(signal):
 
     return feature_values
 
+def extract_features(dataset, variables_modules, window_duration=5.0, overlap_ratio=0.5):
+    """
+    Extract features per window for acceleration, gyroscope, and magnetometer modules.
+
+    Parameters
+    ----------
+    dataset : np.ndarray, shape (n_samples, 13)
+        Raw dataset aligned with variable arrays (timestamps & labels).
+    variables_modules : iterable of (str, np.ndarray)
+        Iterable of (name, modules) pairs, modules aligned with dataset rows.
+    window_duration : float, optional
+        Window duration in seconds (default=5.0).
+    overlap_ratio : float, optional
+        Fractional overlap between windows (default=0.5).
+
+    Returns
+    -------
+    features : np.ndarray, shape (n_windows, n_features)
+        Z-score normalized feature matrix, one row per valid window.
+    labels : np.ndarray, shape (n_windows, 2)
+        Integer matrix: (activity_label, participant_id) for each window.
+    """
+
+    windows = _sliding_windows(dataset, window_duration, overlap_ratio)
+
+    features = []
+    labels = []
+
+    acceleration_modules = variables_modules[0]
+    gyroscope_modules = variables_modules[1]
+    magnetic_modules = variables_modules[2]
+
+    for (start_idx, end_idx, activity_label, participant) in windows:
+        acc_window = acceleration_modules[start_idx:end_idx]
+        gyro_window = gyroscope_modules[start_idx:end_idx]
+        mag_window = magnetic_modules[start_idx:end_idx]
+
+        if acc_window.size == 0 or gyro_window.size == 0 or mag_window.size == 0:
+            continue
+
+        acc_features = _extract_window_features(acc_window)
+        gyro_features = _extract_window_features(gyro_window)
+        mag_features = _extract_window_features(mag_window)
+
+        combined_features = acc_features + gyro_features + mag_features
+
+        participant = int(dataset[start_idx, 12]) 
+        labels.append((activity_label, participant))
+        features.append(combined_features)
+
+    features = np.array(features)
+    labels = np.array(labels)
+
+    return features, labels
 
 def zscore_normalization(features, mean_values=None, std_values=None, return_parameters=False):
     """
@@ -230,62 +285,6 @@ def zscore_normalization(features, mean_values=None, std_values=None, return_par
         return features, mean_values, std_values
     else:
         return features
-
-
-def extract_features(dataset, variables_modules, window_duration=5.0, overlap_ratio=0.5):
-    """
-    Extract features per window for acceleration, gyroscope, and magnetometer modules.
-
-    Parameters
-    ----------
-    dataset : np.ndarray, shape (n_samples, 13)
-        Raw dataset aligned with variable arrays (timestamps & labels).
-    variables_modules : iterable of (str, np.ndarray)
-        Iterable of (name, modules) pairs, modules aligned with dataset rows.
-    window_duration : float, optional
-        Window duration in seconds (default=5.0).
-    overlap_ratio : float, optional
-        Fractional overlap between windows (default=0.5).
-
-    Returns
-    -------
-    features : np.ndarray, shape (n_windows, n_features)
-        Z-score normalized feature matrix, one row per valid window.
-    labels : np.ndarray, shape (n_windows, 2)
-        Integer matrix: (activity_label, participant_id) for each window.
-    """
-
-    windows = _sliding_windows(dataset, window_duration, overlap_ratio)
-
-    features = []
-    labels = []
-
-    acceleration_modules = variables_modules[0][1]
-    gyroscope_modules = variables_modules[1][1]
-    magnetic_modules = variables_modules[2][1]
-
-    for (start_idx, end_idx, activity_label, participant) in windows:
-        acc_window = acceleration_modules[start_idx:end_idx]
-        gyro_window = gyroscope_modules[start_idx:end_idx]
-        mag_window = magnetic_modules[start_idx:end_idx]
-
-        if acc_window.size == 0 or gyro_window.size == 0 or mag_window.size == 0:
-            continue
-
-        acc_features = _extract_window_features(acc_window)
-        gyro_features = _extract_window_features(gyro_window)
-        mag_features = _extract_window_features(mag_window)
-
-        combined_features = acc_features + gyro_features + mag_features
-
-        participant = int(dataset[start_idx, 12]) 
-        labels.append((activity_label, participant))
-        features.append(combined_features)
-
-    features = np.array(features)
-    labels = np.array(labels)
-
-    return features, labels
 
 # --- Exercise 4.3: PCA ---
 

@@ -42,6 +42,12 @@ ACTIVITY_NAMES = [
     "Climb Stairs and Talk -> Walk and Talk"
 ]
 
+VARIABLE_NAMES = [
+    "Acceleration (|Acc|)",
+    "Angular Velocity (|Gyro|)",
+    "Magnetic Field (|Mag|)"
+]
+
 # --- Exercise 3.1: Module Computation ---
 
 
@@ -64,13 +70,9 @@ def compute_modules(dataset):
     gyro_modules = np.linalg.norm(dataset[:, 4:7], axis=1)
     mag_modules = np.linalg.norm(dataset[:, 7:10], axis=1)
 
-    variables_modules = [
-        ("Acceleration (|Acc|)", acc_modules),
-        ("Angular Velocity (|Gyro|)", gyro_modules),
-        ("Magnetic Field (|Mag|)", mag_modules)
-    ]
+    variables_modules = [ acc_modules ,gyro_modules, mag_modules]
 
-    return variables_modules
+    return np.array(variables_modules)
 
 def boxplot_modules(dataset, variables_modules):
     """
@@ -87,7 +89,7 @@ def boxplot_modules(dataset, variables_modules):
     print_and_log("\n--- Boxplots of Variable Modules ---")
     device_choice = int(input("\nPick a device (1-5): "))
 
-    for name, modules in variables_modules:
+    for name, modules in zip(VARIABLE_NAMES, variables_modules):
         activities_col = dataset[:, 11]
         devices_col = dataset[:, 0]
         activities_number = np.arange(1, 17)
@@ -126,7 +128,7 @@ def outlier_density_iqr(dataset, variables_modules):
         List of (name, modules) for Acc, Gyro, Mag vector magnitudes.
     """
     
-    for variable_name, variable_modules in variables_modules:
+    for variable_name, variable_modules in zip(VARIABLE_NAMES, variables_modules):
         print_and_log(f"\n--- {variable_name} Outlier Densities via IQR ---\n")
         right_wrist_mask = dataset[:, 0] == 2
         activities = dataset[right_wrist_mask, 11]
@@ -164,7 +166,7 @@ def outlier_density_z_score(dataset, variables_modules, k):
     
     print_and_log("\n--- Outlier Detection via Z-Score ---")
 
-    for variable_name, variable_modules in variables_modules:
+    for variable_name, variable_modules in zip(VARIABLE_NAMES, variables_modules):
         print_and_log(f"\n--- {variable_name} Outlier Densities via Z-Score ---\n")
         right_wrist_mask = dataset[:, 0] == 2
         activities = dataset[right_wrist_mask, 11]
@@ -191,7 +193,7 @@ def outlier_density_z_score(dataset, variables_modules, k):
                 density = float(outlier_mask.mean() * 100.0)
             print_and_log(f"Activity {activity}: {density:.2f}% ({outlier_count}/{n})")
 
-def _z_score(dataset, var_modules, activity, k):
+def _z_score_indices(dataset, var_modules, activity, k):
     """
     Return indices of outliers in a variable module for a given activity using z-score.
 
@@ -237,8 +239,8 @@ def plot_zscore_outliers(dataset, variables_modules, k):
     print_and_log("\n--- Z-Score Outlier Visualization ---\n")
     activity_id = int(input("Pick an activity to highlight outliers (1-16): "))
 
-    for variable_name, variable_modules in variables_modules:
-        outlier_idxs = _z_score(dataset, variable_modules, activity_id, k=k)
+    for variable_name, variable_modules in zip(VARIABLE_NAMES, variables_modules):
+        outlier_idxs = _z_score_indices(dataset, variable_modules, activity_id, k=k)
         activity_mask = dataset[:, 11] == activity_id
         activity_data = variable_modules[activity_mask]
         idxs = np.arange(activity_data.size)
@@ -250,6 +252,39 @@ def plot_zscore_outliers(dataset, variables_modules, k):
         plt.ylabel("Variable")
         plt.legend()
         plt.show()
+
+def remove_outliers(dataset, variables_modules, k):
+    """
+    Remove z-score outliers from the dataset for all variable modules.
+
+    Parameters
+    ----------
+    dataset : np.ndarray, shape (n_samples, 13)
+        Raw dataset matrix.
+    variables_modules : list of (str, np.ndarray)
+        List of (name, modules) for Acc, Gyro, Mag vector magnitudes.
+    k : float
+        Z-score threshold for outlier detection.
+
+    Returns
+    -------
+    cleaned_dataset : np.ndarray
+        Dataset with outlier samples removed.
+    """
+    
+    outlier_mask = np.zeros(dataset.shape[0], dtype=bool)
+
+    for variable_modules in variables_modules:
+        for activity in range(1, 17):
+            activity_mask = dataset[:, 11] == activity
+            activity_outlier_idxs = _z_score_indices(dataset, variable_modules, activity, k=k)
+            full_outlier_idxs = np.where(activity_mask)[0][activity_outlier_idxs]
+            outlier_mask[full_outlier_idxs] = True
+
+    # Remove outliers from dataset and all variable modules
+    cleaned_dataset = dataset[~outlier_mask]
+    cleaned_modules = [variable_modules[~outlier_mask] for variable_modules in variables_modules]
+    return cleaned_dataset, cleaned_modules
 
 # --- Exercise 3.6 and 3.7: Clustering ---
 
@@ -267,7 +302,7 @@ def kmeans(variables_modules, n_clusters):
     
     n_clusters = int(input("\n--- K-Means Clustering ---\n\nChoose the number of clusters: (e.g., 2, 3, 4): "))
 
-    for variable_name, variable_modules in variables_modules:
+    for variable_name, variable_modules in zip(VARIABLE_NAMES, variables_modules):
         print_and_log(f"\n--- {variable_name} K-Means Results ---\n")
         reshaped_data = np.array(variable_modules).reshape(-1, 1)
         kmeans = KMeans(n_clusters, random_state=42)
@@ -296,9 +331,9 @@ def plot_kmeans_clusters(dataset, variables_modules, n_clusters=3):
     activity_choice = int(input("\nPick an activity to highlight outliers (1-16): "))
     device_choice = int(input("Pick a device to highlight outliers (1-5): "))
 
-    acc_modules = variables_modules[0][1]
-    gyro_modules = variables_modules[1][1]
-    mag_modules = variables_modules[2][1]
+    acc_modules = variables_modules[0]
+    gyro_modules = variables_modules[1]
+    mag_modules = variables_modules[2]
 
     device_mask = dataset[:, 0] == device_choice
     activity_mask = dataset[:, 11] == activity_choice
@@ -369,9 +404,9 @@ def plot_dbscan_clusters(dataset, variables_modules, eps=0.5, min_samples=5):
     
     print_and_log(f"\n--- DBSCAN Clustering ---")
 
-    acc_modules = variables_modules[0][1]
-    gyro_modules = variables_modules[1][1]
-    mag_modules = variables_modules[2][1]
+    acc_modules = variables_modules[0]
+    gyro_modules = variables_modules[1]
+    mag_modules = variables_modules[2]
 
     activity_choice = int(input("\nPick an activity to highlight outliers (1-16): "))
     device_choice = int(input("Pick a device to highlight outliers (1-5): "))
