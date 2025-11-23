@@ -23,7 +23,7 @@ def partA ():
 
     variables_modules = compute_modules(dataset) 
 
-    boxplot_modules(dataset, variables_modules)
+    '''boxplot_modules(dataset, variables_modules)
 
     # --- Exercise 3.2: Outlier Densities via IQR ---
 
@@ -45,7 +45,7 @@ def partA ():
     # --- Exercise 4.1: Statistical Tests ---
 
     alpha = 0.05
-    normality_and_significance(dataset, variables_modules, alpha)
+    normality_and_significance(dataset, variables_modules, alpha)'''
 
     # --- Exercise 4.2: Feature Extraction ---
     
@@ -56,14 +56,14 @@ def partA ():
 
     pca, explained_variance_ratio, _ = compute_pca(features)
 
-    # --- Exercise 4.4: PCA Analysis ---
+    '''# --- Exercise 4.4: PCA Analysis ---
 
     analyse_pca(explained_variance_ratio)
 
     # --- Exercise 4.5: Fisher and ReliefF ---
 
     fisher(features, labels)
-    relief(features, labels, n_neighbors=100)
+    relief(features, labels, n_neighbors=100)'''
 
 def partB ():
 
@@ -121,7 +121,7 @@ if __name__ == "__main__":
 
     #--- Run Part A Exercises ---
 
-    partA()
+    #partA()
 
     #--- Run Part B Exercises ---
 
