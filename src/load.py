@@ -64,6 +64,24 @@ def load_data():
         np.save("npy/dataset.npy", dataset)
         return dataset
     
+def save_data(dataset, features, labels):
+    """
+    Save dataset and variable modules to .npy files.
+
+    Parameters
+    ----------
+    dataset : np.ndarray
+        Raw dataset matrix.
+    features : np.ndarray, shape (n_windows, n_features)
+        Feature matrix.
+    labels : np.ndarray, shape (n_windows, 2)
+        Integer array: column 0 is activity, column 1 is participant ID.
+    """
+    
+    np.save("npy/dataset.npy", dataset)
+    np.save("npy/features.npy", features)
+    np.save("npy/feature_labels.npy", labels)
+    
 def reload_data():
 	"""
 	Load or recompute cached feature artifacts from the `data/` folder.

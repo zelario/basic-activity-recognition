@@ -78,7 +78,7 @@ def analyze_activity_balance(labels):
 	for activity, count in zip(unique, counts):
 		print_and_log(f"Activity {activity}: {count} samples")
 
-def augment_activity_data(features, labels, activity=4, participant=3, n_samples=3, ):
+def augment_activity_data(features, labels, activity=4, participant=3, n_samples=3):
 	"""
 	Generate synthetic samples for a specific activity using SMOTE-like interpolation.
 

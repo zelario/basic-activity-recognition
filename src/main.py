@@ -67,6 +67,8 @@ def partA ():
     fisher(features, labels)
     relief(features, labels, n_neighbors=100)'''
 
+    save_data(dataset, features, labels)
+
 def partB ():
 
     # --- Pre game dataset loading and preprocessing ---
@@ -123,7 +125,7 @@ if __name__ == "__main__":
 
     #--- Run Part A Exercises ---
 
-    #partA()
+    partA()
 
     #--- Run Part B Exercises ---
 

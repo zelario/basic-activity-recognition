@@ -1,7 +1,0 @@
-EXTRA:
-
-fazer label de device por device
-
-balanceamento de atividades smote
-
-retirar outliers de cada atividade

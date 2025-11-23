@@ -402,7 +402,6 @@ def fisher(features, labels):
         name = FEATURES_NAMES[sorted_idx[i]] if FEATURES_NAMES else f"feature_{sorted_idx[i]}"
         print_and_log(f"{i+1:02d}. {name:>20s}  |  score = {sorted_scores[i]:.4f}")
 
-
 def relief(dataset, labels, n_neighbors=50, n_samples=500, top_n=10, print_output=True):
     """
     Approximate ReliefF feature ranking using random sampling.
