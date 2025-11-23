@@ -25,8 +25,7 @@ from sklearn.neighbors import NearestNeighbors
 # --- Pre Game ---
 
 def discard_activities(features=None, pca=None, labels=None, embeddings=None):
-	"""
-	Discard samples whose activity label is greater than 7.
+	"""Discard samples whose activity label is greater than 7.
 
 	Parameters
 	----------
@@ -42,8 +41,7 @@ def discard_activities(features=None, pca=None, labels=None, embeddings=None):
 	Returns
 	-------
 	tuple
-		Filtered arrays containing only rows for which activity <= 7.
-	"""
+		Filtered arrays containing only rows for which activity <= 7."""
 	
 	if features is not None and labels is not None:
 		mask = labels[:, 0] <= 7

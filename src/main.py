@@ -11,9 +11,9 @@ from model_learning import *
 
 def partA ():
 
-    # --- Exercise 1: Load Part Dataset ---
+    '''# --- Exercise 1: Load Part Dataset ---
 
-    '''part_dataset = load_part_dataset(0)'''
+    part_dataset = load_part_dataset(0)'''
 
     # --- Exercise 2: Load Full Dataset ---
 
@@ -22,7 +22,8 @@ def partA ():
     # --- Exercise 3.1: Variable Modules ---
 
     variables_modules = compute_modules(dataset) 
-    boxplot_modules(dataset, variables_modules)
+
+    '''boxplot_modules(dataset, variables_modules)
 
     # --- Exercise 3.2: Outlier Densities via IQR ---
 
@@ -44,7 +45,7 @@ def partA ():
     # --- Exercise 4.1: Statistical Tests ---
 
     alpha = 0.05
-    normality_and_significance(dataset, variables_modules, alpha)
+    normality_and_significance(dataset, variables_modules, alpha)'''
 
     # --- Exercise 4.2: Feature Extraction ---
     
@@ -53,17 +54,16 @@ def partA ():
 
     # --- Exercise 4.3: PCA ---
 
-    n_components = 36
-    pca, explained_variance_ratio, _ = compute_pca(features, n_components)
+    pca, explained_variance_ratio, _ = compute_pca(features)
 
-    # --- Exercise 4.4: PCA Analysis ---
+    '''# --- Exercise 4.4: PCA Analysis ---
 
     analyse_pca(explained_variance_ratio)
 
     # --- Exercise 4.5: Fisher and ReliefF ---
 
     fisher(features, labels)
-    relief(features, labels, n_neighbors=100)
+    relief(features, labels, n_neighbors=100)'''
 
 def partB ():
 
@@ -72,7 +72,7 @@ def partB ():
     dataset, features, labels = reload_data()
     features, labels = discard_activities(features=features, labels=labels)
     
-    # --- Exercise 1.1: Analyse sample balance ---
+    '''# --- Exercise 1.1: Analyse sample balance ---
 
     analyze_activity_balance(labels)
 
@@ -82,7 +82,7 @@ def partB ():
 
     # --- Exercise 1.3: Visualize Synthetic vs Real Samples ---
 
-    '''plot_synthetic_vs_real(features, labels, synthetic_features)'''
+    plot_synthetic_vs_real(features, labels, synthetic_features)'''
 
     # --- Exercise 2.1: Embeddings ---
 

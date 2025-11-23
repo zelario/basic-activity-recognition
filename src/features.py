@@ -289,7 +289,7 @@ def extract_features(dataset, variables_modules, window_duration=5.0, overlap_ra
 
 # --- Exercise 4.3: PCA ---
 
-def compute_pca(dataset, n_components=None, pca_object=None):
+def compute_pca(dataset, n_components=36, pca_object=None):
     """Perform principal component analysis (PCA) and return projected data and explained variance ratio.
 
     Parameters
