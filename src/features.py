@@ -135,7 +135,7 @@ def _sliding_windows(dataset, window_duration=5.0, overlap=0.5):
             end += 1
 
         if end - start > 1:
-            windows.append((start, end, activity_ref, participant_ref))
+            windows.append((start, end, activity_ref, participant_ref, device_ref))
 
         # Overlap
         if overlap > 0:
@@ -228,7 +228,7 @@ def extract_features(dataset, variables_modules, window_duration=5.0, overlap_ra
     gyroscope_modules = variables_modules[1]
     magnetic_modules = variables_modules[2]
 
-    for (start_idx, end_idx, activity_label, participant) in windows:
+    for (start_idx, end_idx, activity_label, participant, device) in windows:
         acc_window = acceleration_modules[start_idx:end_idx]
         gyro_window = gyroscope_modules[start_idx:end_idx]
         mag_window = magnetic_modules[start_idx:end_idx]
@@ -243,7 +243,7 @@ def extract_features(dataset, variables_modules, window_duration=5.0, overlap_ra
         combined_features = acc_features + gyro_features + mag_features
 
         participant = int(dataset[start_idx, 12]) 
-        labels.append((activity_label, participant))
+        labels.append((activity_label, participant, device))
         features.append(combined_features)
 
     features = np.array(features)

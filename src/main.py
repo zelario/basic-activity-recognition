@@ -127,7 +127,7 @@ if __name__ == "__main__":
 
     #--- Run Part A Exercises ---
 
-    '''partA()'''
+    partA()
 
     #--- Run Part B Exercises ---
 
