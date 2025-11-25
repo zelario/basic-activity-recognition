@@ -8,9 +8,6 @@ This module contains functions for:
 - discarding samples by activity label,
 - performing SMOTE oversampling,
 - visualizing augmented data and PCA results.
-
-Artifacts expected in `data/` folder:
-- features.npy, pca.npy, labels.npy
 """
 
 from load import *
@@ -130,34 +127,50 @@ def augment_activity_data(features, labels, activity=4, participant=3, n_samples
 
 	return synthetic_features
 
-def augment_dataset(dataset, labels):
+def augment_dataset(features, embeddings, labels):
 	"""
-	Augment the entire dataset (features or embeddings) using SMOTE to balance activity classes.
+	Augment both features and embeddings using SMOTE to balance activity classes.
 
 	Parameters
 	----------
-	dataset : np.ndarray
-		Feature or embedding matrix (n_samples, n_features or n_embedding_features).
+	features : np.ndarray
+		Feature matrix (n_samples, n_features).
+	embeddings : np.ndarray
+		Embedding matrix (n_samples, n_embedding_features).
 	labels : np.ndarray
 		Label matrix (n_samples, 2): column 0 is activity, column 1 is participant.
 
 	Returns
 	-------
-	augmented_array : np.ndarray
-		Augmented feature or embedding matrix after SMOTE.
+	augmented_features : np.ndarray
+		Augmented feature matrix after SMOTE.
+	augmented_embeddings : np.ndarray
+		Augmented embedding matrix after SMOTE.
 	augmented_labels : np.ndarray
 		Corresponding labels for augmented samples.
 	"""
+	
+	# Ensure all arrays have the same number of samples
+	n_samples = min(features.shape[0], embeddings.shape[0], labels.shape[0])
+	features = features[:n_samples]
+	embeddings = embeddings[:n_samples]
+	labels = labels[:n_samples]
+
 	smote = SMOTE()
-	augmented_dataset, augmented_activity_labels = smote.fit_resample(dataset, labels[:, 0])
+	augmented_features, augmented_activity_labels = smote.fit_resample(features, labels[:, 0])
+	augmented_embeddings, _ = smote.fit_resample(embeddings, labels[:, 0])
 
-	# Reconstruct labels with participant IDs (assigning -1 for synthetic samples)
-	synthetic_participant_ids = -1 * np.ones((augmented_activity_labels.shape[0] - labels.shape[0], 1), dtype=int)
+	# Reconstruct labels with random participant and device ids for synthetic samples
+	synthetic_count = augmented_activity_labels.shape[0] - labels.shape[0]
 	original_participant_ids = labels[:, 1].reshape(-1, 1)
+	rng = np.random.default_rng()
+	synthetic_participant_ids = rng.integers(1, 15, size=(synthetic_count, 1))
 	augmented_participant_ids = np.vstack((original_participant_ids, synthetic_participant_ids))
-	augmented_labels = np.hstack((augmented_activity_labels.reshape(-1, 1), augmented_participant_ids))
+	synthetic_device_ids = rng.integers(1, 6, size=(synthetic_count, 1))
+	augmented_device_ids = np.vstack((labels[:, 2].reshape(-1, 1), synthetic_device_ids))
+	augmented_labels = np.hstack((augmented_activity_labels.reshape(-1, 1), augmented_participant_ids, augmented_device_ids))
 
-	return augmented_dataset, augmented_labels
+	return augmented_features, augmented_embeddings, augmented_labels
 
 # --- Exercise 1.3: Visualize Synthetic vs Real Samples ---
 
