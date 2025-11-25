@@ -8,6 +8,8 @@ def hyperparemeter_tuning(features, embeddings, labels, k_values=[1], n_splits=1
     print_and_log(f"\n--- Hyperparameter Tuning over {n_splits} different splits ---\n", path="log/hyperparameter_tuning.log")
     print_and_log(f"\n--- Hyperparameter Tuning best k values results ---\n")
 
+    metrics = [] 
+
     # For each splitting method
     for method in ['mixed', 'participant']:
 
@@ -24,6 +26,9 @@ def hyperparemeter_tuning(features, embeddings, labels, k_values=[1], n_splits=1
                 # For n_splits or number of splits
                 for i, split in enumerate(splits):
 
+                    # Split number label
+                    split_number = i + 1 if method == 'mixed' else 10 + i + 1
+
                     # Prepare dataset
                     pipeline = prepare_pipeline(split[0], split[1], split[2])
 
@@ -34,12 +39,15 @@ def hyperparemeter_tuning(features, embeddings, labels, k_values=[1], n_splits=1
                         knn_model = sklearn_knn_classifier(pipeline[0], scenario=scenario, type=type, k=k)
 
                         # Validate model
-                        metrics = validate_model(knn_model, pipeline[1], k=k, scenario=scenario, type=type, method=method)
-                        accuracy = metrics['accuracy']
+                        iteration_metrics = validate_model(knn_model, pipeline[1], k=k, scenario=scenario, type=type, method=method)
+
+                        metrics.append((method, type, scenario, split_number, k, 
+                                        iteration_metrics['confusion_matrix'], iteration_metrics['accuracy'],
+                                        iteration_metrics['precision'], iteration_metrics['recall'], iteration_metrics['f1_score']))
 
                         # Store the k and its accuracy
-                        k_accuracies[(k)].append(accuracy)
-                        print_and_log(f"Method: {method}, Type: {type}, Scenario: {scenario}, Split= {i+1}, k= {k}, Accuracy: {accuracy:.4f}", path="log/hyperparameter_tuning.log")
+                        k_accuracies[(k)].append(iteration_metrics['accuracy'])
+                        print_and_log(f"Method: {method}, Type: {type}, Scenario: {scenario}, Split= {split_number}, k= {k}, Accuracy: {iteration_metrics['accuracy']:.4f}", path="log/hyperparameter_tuning.log")
 
                 # Get the best k value
                 k_mean_accuracy = {k: (sum(accs)/len(accs) if accs else 0) for k, accs in k_accuracies.items()}
@@ -62,6 +70,8 @@ def hyperparemeter_tuning(features, embeddings, labels, k_values=[1], n_splits=1
                 knn_model = sklearn_knn_classifier(new_train_dataset, scenario=scenario, type=type, k=best_k_value)
 
                 # Final test
-                metrics = validate_model(knn_model, pipeline[2], k=best_k_value, scenario=scenario, type=type, method=method)
-                accuracy = metrics['accuracy']
-                print_and_log(f"Method: {method}, Type: {type}, Scenario: {scenario}, k= {best_k_value}, Accuracy: {accuracy:.4f}")
+                iteration_metrics = validate_model(knn_model, pipeline[2], k=best_k_value, scenario=scenario, type=type, method=method)
+                print_and_log(f"Method: {method}, Type: {type}, Scenario: {scenario}, k= {best_k_value}, Accuracy: {iteration_metrics['accuracy']:.4f}")
+    
+    metrics = np.array(metrics, dtype=object)
+    np.save("npy/metrics.npy", metrics)

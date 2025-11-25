@@ -129,8 +129,8 @@ def validate_model(knn_model, validate_dataset, k=3, scenario=None, type=None, m
     print_and_log("Confusion Matrix:\n", path="log/validation_metrics.log")
     print_and_log("         PREDICTED", path="log/validation_metrics.log")
     print_and_log("      ", end="", path="log/validation_metrics.log")
-    for lbl in range(1, 8):
-        print_and_log(f"{lbl:>5}", end="", path="log/validation_metrics.log")
+    for label in range(1, 8):
+        print_and_log(f"{label:>5}", end="", path="log/validation_metrics.log")
     print_and_log(path="log/validation_metrics.log")
     real_label = "REAL"
     for row_idx, row in enumerate(confusion):
