@@ -11,9 +11,9 @@ from model_learning import *
 
 def partA ():
 
-    # --- Exercise 1: Load Part Dataset ---
+    '''# --- Exercise 1: Load Part Dataset ---
 
-    part_dataset = load_part_data(0)
+    part_dataset = load_part_data(0)'''
 
     # --- Exercise 2: Load Full Dataset ---
 
@@ -23,7 +23,7 @@ def partA ():
 
     variables_modules = compute_modules(dataset) 
 
-    boxplot_modules(dataset, variables_modules)
+    '''boxplot_modules(dataset, variables_modules)
 
     # --- Exercise 3.2: Outlier Densities via IQR ---
 
@@ -45,7 +45,7 @@ def partA ():
     # --- Exercise 4.1: Statistical Tests ---
 
     alpha = 0.05
-    normality_and_significance(dataset, variables_modules, alpha)
+    normality_and_significance(dataset, variables_modules, alpha)'''
 
     # --- Exercise 4.2: Feature Extraction ---
 
@@ -54,7 +54,7 @@ def partA ():
     features, labels = extract_features(dataset, variables_modules, window_duration=5.0, overlap_ratio=0.5)
     features = zscore_normalization(features)
 
-    # --- Exercise 4.3: PCA ---
+    '''# --- Exercise 4.3: PCA ---
 
     pca, explained_variance_ratio, _ = compute_pca(features)
 
@@ -65,7 +65,9 @@ def partA ():
     # --- Exercise 4.5: Fisher and ReliefF ---
 
     fisher(features, labels)
-    relief(features, labels, n_neighbors=100)
+    relief(features, labels, n_neighbors=100)'''
+
+    # --- Save Data ---
 
     save_data(dataset, features, labels)
 
@@ -127,7 +129,7 @@ if __name__ == "__main__":
 
     #--- Run Part A Exercises ---
 
-    partA()
+    '''partA()'''
 
     #--- Run Part B Exercises ---
 
