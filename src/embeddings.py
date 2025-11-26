@@ -96,7 +96,12 @@ def compute_embeddings(dataset, fs=51.5, window_duration=5.0, overlap_ratio=0.5)
 
         # Iterate over windows, extract acc raw data, and resample
         for (start_idx, end_idx, activity, participant, device) in windows:
-            raw_acc_segment = dataset[start_idx:end_idx, 1:4]  # Acc data in cols 1, 2, 3
+            raw_acc_segment = dataset[start_idx:end_idx, 1:4] 
+
+            minimum_samples = 20
+            if raw_acc_segment.shape[0] < minimum_samples:
+                continue
+
             resampled_segment = resample_to_30hz_5s(raw_acc_segment, fs)
             resampled_windows.append(resampled_segment)
             labels.append([activity, participant, device])

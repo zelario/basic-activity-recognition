@@ -234,7 +234,8 @@ def extract_features(dataset, variables_modules, window_duration=5.0, overlap_ra
         gyro_window = gyroscope_modules[start_idx:end_idx]
         mag_window = magnetic_modules[start_idx:end_idx]
 
-        if acc_window.size == 0 or gyro_window.size == 0 or mag_window.size == 0:
+        minimum_samples = 20 
+        if acc_window.size < minimum_samples or gyro_window.size < minimum_samples or mag_window.size < minimum_samples:
             continue
 
         # For each variable, extract features

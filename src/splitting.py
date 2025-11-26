@@ -149,8 +149,8 @@ def prepare_pipeline(train_dataset, validate_dataset, test_dataset):
     normalized_train_embeddings, embedding_means, embedding_stds = zscore_normalization(train_embeddings_all, return_parameters=True)
 
     # Compute PCA on normalized training features and embeddings
-    train_features_pca, explained_variance_features, pca_object_features = compute_pca(normalized_train_features, n_components=None)
-    train_embeddings_pca, explained_variance_embeddings, pca_object_embeddings = compute_pca(normalized_train_embeddings, n_components=None)
+    train_features_pca, explained_variance_features, pca_object_features = compute_pca(normalized_train_features)
+    train_embeddings_pca, explained_variance_embeddings, pca_object_embeddings = compute_pca(normalized_train_embeddings)
 
     # Determine number of components to retain 90% variance
     cumulative_features = np.cumsum(explained_variance_features)
@@ -179,8 +179,8 @@ def prepare_pipeline(train_dataset, validate_dataset, test_dataset):
     normalized_test_embeddings = zscore_normalization(test_embeddings_all, mean_values=embedding_means, std_values=embedding_stds)
 
     # Project test set using PCA fitted on training set
-    test_features_pca = compute_pca(normalized_test_features, n_components=n_components_90_features, pca_object=pca_object_features)
-    test_embeddings_pca = compute_pca(normalized_test_embeddings, n_components=n_components_90_embeddings, pca_object=pca_object_embeddings)
+    test_features_pca = compute_pca(normalized_test_features, pca_object=pca_object_features)
+    test_embeddings_pca = compute_pca(normalized_test_embeddings, pca_object=pca_object_embeddings)
 
     test_features_pca = test_features_pca[:, :n_components_90_features]
     test_embeddings_pca = test_embeddings_pca[:, :n_components_90_embeddings]

@@ -1,6 +1,6 @@
 """
-Dataset loading utilities for ECAC project.
-File used for full exercise 1 and 2.
+Dataset loading.
+File used for exercise 1 and 2.
 
 This module contains functions for:
 -- loading sensor dataset from CSV files for a given part,
@@ -9,7 +9,7 @@ This module contains functions for:
 
 Column conventions expected in loaded arrays:
 - Columns 0-12: sensor and metadata values
-- Last column: part number (added during part loading)
+- Last column 13: participant number (added during part loading)
 """
 
 from log import print_and_log
@@ -19,8 +19,7 @@ import numpy as np
 import csv
 
 def load_part_data(part_number):
-    """
-    Load sensor dataset for a given part from CSV files for all devices.
+    """Load sensor dataset for a given part from CSV files for all devices.
 
     Parameters
     ----------
@@ -47,8 +46,7 @@ def load_part_data(part_number):
     return np.array(dataset)
 
 def load_data():
-    """
-    Load the full dataset from all parts, using cached .npy file if available.
+    """Load the full dataset from all parts, using cached .npy file if available.
 
     Returns
     -------
@@ -65,18 +63,16 @@ def load_data():
         return dataset
     
 def save_data(dataset, features, labels):
-    """
-    Save dataset and variable modules to .npy files.
+    """Save dataset and variable modules to .npy files.
 
     Parameters
     ----------
-    dataset : np.ndarray
+    dataset : matrix, sha
         Raw dataset matrix.
     features : np.ndarray, shape (n_windows, n_features)
         Feature matrix.
     labels : np.ndarray, shape (n_windows, 2)
-        Integer array: column 0 is activity, column 1 is participant ID.
-    """
+        Integer array: column 0 is activity, column 1 is participant ID."""
     
     np.save("npy/dataset.npy", dataset)
     np.save("npy/features.npy", features)
