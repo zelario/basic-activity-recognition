@@ -75,3 +75,24 @@ def hyperparemeter_tuning(features, embeddings, labels, k_values=[1], n_splits=1
     
     metrics = np.array(metrics, dtype=object)
     np.save("npy/metrics.npy", metrics)
+
+# --- Exercise 5.2: Results Report ---
+
+'''
+1. Matrizes de confusão e atividades mais difíceis de classificar :
+
+Ao analisar as matrizes de confusão, nota-se que a maioria das atividades é bem classificada, especialmente para k=1 devido à menor remoção de outliers do dataset. No entanto, 
+à medida que k aumenta, a accuracy diminui, indicando que algumas atividades se tornam mais difíceis de distinguir, provavelmente devido à sua semelhança. As atividades com 
+valores mais baixos de precisão e recall são as que apresentam maior confusão, mas no geral, o desempenho é aceitável.
+
+2. Melhor dataset: features ou embeddings:
+
+Os resultados mostram que os embeddings apresentam melhor desempenho, especialmente no cenário a). Nos outros cenários, a diferença diminui, mas embeddings continuam ligeiramente 
+superiores. Portanto, embeddings são o melhor dataset para classificação das atividades revelando que as features extraídas capturam inferiormente as características relevantes.
+
+3. Seleção de features e impacto na performance:
+
+O melhor desempenho ocorre para k=1, sugerindo que uma seleção mais restrita (menos vizinhos ou features mais relevantes) melhora a classificação. A remoção de outliers no início 
+do processamento contribuiu para este resultado, tornando o k-NN com k=1 mais fiável. A seleção de features, por si só, não trouxe melhorias significativas em relação ao uso de 
+embeddings, que já encapsulam informação relevante.
+'''
