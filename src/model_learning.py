@@ -48,15 +48,15 @@ def knn_classifier(train_dataset, type="features", scenario='a', k=3):
         return np.array(prediction_labels)
     return predict
 
-def sklearn_knn_classifier(train_dataset, type="features", scenario='a', k=3):
+def sklearn_knn_classifier(train_dataset, train_labels, k=3):
     """Returns a knn model trained on the selected scenario using scikit-learn's KNeighborsClassifier.
     
     Parameters
     ----------
     train_dataset : matrix
         train dataset containing all scenarios datasets.
-    scenario : str
-        Scenario to use: 'a', 'b', or 'c'.
+    train_labels : matrix
+        train labels corresponding to the train dataset.
     k : int
         Number of neighbors to consider.
     
@@ -64,31 +64,15 @@ def sklearn_knn_classifier(train_dataset, type="features", scenario='a', k=3):
     -------
     predict : function
         Function that takes a validate dataset and returns predictions."""
-
-    scenario_indices = {'a': 0, 'b': 1, 'c': 2}
     
-    if type == "features":
-        train_scenario_data = train_dataset[scenario_indices[scenario]]
-    elif type == "embeddings":
-        train_scenario_data = train_dataset[scenario_indices[scenario] + 3]
-
     model = KNeighborsClassifier(n_neighbors=k)
-    model.fit(train_scenario_data, train_dataset[6][:, 0])
+    model.fit(train_dataset, train_labels[:, 0])
 
-    def predict(validate_dataset):
-
-        if type == "features":
-            validate_scenario_data = validate_dataset[scenario_indices[scenario]]
-        elif type == "embeddings":
-            validate_scenario_data = validate_dataset[scenario_indices[scenario] + 3]
-
-        return model.predict(validate_scenario_data)
-
-    return predict
+    return model
 
 # --- Exercise 4.2: Classification Metrics ---
 
-def validate_model(knn_model, validate_dataset, k=3, scenario=None, type=None, method=None):
+def validate_model(knn_model, validate_dataset, validate_labels, k=3, scenario=None, type=None, method=None):
     """Evaluate knn classifier on validate data.
 
     Parameters
@@ -104,8 +88,8 @@ def validate_model(knn_model, validate_dataset, k=3, scenario=None, type=None, m
         Dictionary containing confusion matrix, accuracy, precision, recall, F1 score."""
 
     # Get predictions and true labels
-    predicted_labels = knn_model(validate_dataset)
-    true_labels = validate_dataset[6][:, 0]
+    predicted_labels = knn_model.predict(validate_dataset)
+    true_labels = validate_labels[:, 0]
     predicted_labels = np.array(predicted_labels)
 
     # Compute metrics

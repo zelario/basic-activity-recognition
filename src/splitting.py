@@ -42,7 +42,9 @@ def mixed_splitting(features, embeddings, labels):
     validate_dataset = np.array(val_features), np.array(validate_embeddings), np.array(validate_labels)
     test_dataset = np.array(test_features), np.array(test_embeddings), np.array(test_labels)
 
-    return train_dataset, validate_dataset, test_dataset
+    split = {"train": train_dataset, "validate": validate_dataset, "test": test_dataset}
+
+    return split
 
 # --- Exercise 3.2: Participant-based splitting ---
 
@@ -95,7 +97,9 @@ def participant_splitting(features, embeddings, labels, train_n=9, validate_n=3,
     validate_dataset = np.array(features[validate_mask]), np.array(embeddings[validate_mask]), np.array(labels[validate_mask])
     test_dataset = np.array(features[test_mask]), np.array(embeddings[test_mask]), np.array(labels[test_mask])
 
-    return train_dataset, validate_dataset, test_dataset
+    split = {"train": train_dataset, "validate": validate_dataset, "test": test_dataset}
+
+    return split
 
 # --- Exercise 3.3: Discussion on splitting strategies ---
 
@@ -112,7 +116,7 @@ que o modelo se beneficie de padrões individuais presentes no treino.'''
 
 # --- Exercise 3.4: Pipeline preparation ---
 
-def prepare_pipeline(train_dataset, validate_dataset, test_dataset):
+def prepare_pipeline(split):
     """Prepare three feature transformation scenarios for train, validate, and test sets:
       a) All features/embeddings (no transformation)
       b) PCA-reduced features (retain 90% variance, fit on train only)
@@ -138,9 +142,9 @@ def prepare_pipeline(train_dataset, validate_dataset, test_dataset):
     # === Scenario a: All features/embeddings ===
 
     # Unpack datasets
-    train_features_all, train_embeddings_all, train_labels = train_dataset
-    validate_features_all, validate_embeddings_all, validate_labels = validate_dataset
-    test_features_all, test_embeddings_all, test_labels = test_dataset
+    train_features_all, train_embeddings_all, train_labels = split["train"]
+    validate_features_all, validate_embeddings_all, validate_labels = split["validate"]
+    test_features_all, test_embeddings_all, test_labels = split["test"]
 
     # === Scenario b: PCA-reduced features and embeddings (90% variance) ===
 
@@ -200,33 +204,47 @@ def prepare_pipeline(train_dataset, validate_dataset, test_dataset):
     validate_embeddings_relief = normalized_validate_embeddings[:, top_15_embeddings_indices]
     test_embeddings_relief = normalized_test_embeddings[:, top_15_embeddings_indices]
 
-    pipeline = [
-        [
-            np.array(train_features_all),   
-            np.array(train_features_pca),
-            np.array(train_features_relief),
-            np.array(train_embeddings_all),
-            np.array(train_embeddings_pca),
-            np.array(train_embeddings_relief),
-            np.array(train_labels)
-        ],
-        [
-            np.array(validate_features_all),
-            np.array(validate_features_pca),
-            np.array(validate_features_relief),
-            np.array(validate_embeddings_all),
-            np.array(validate_embeddings_pca),
-            np.array(validate_embeddings_relief),
-            np.array(validate_labels)
-        ],
-        [
-            np.array(test_features_all),
-            np.array(test_features_pca),
-            np.array(test_features_relief),
-            np.array(test_embeddings_all),
-            np.array(test_embeddings_pca),
-            np.array(test_embeddings_relief),
-            np.array(test_labels)
-        ]
-    ]
+    # Prepare pipeline dictionary
+    pipeline = {
+        "train": {
+            "features": {
+                "a": np.array(train_features_all),
+                "b": np.array(train_features_pca),
+                "c": np.array(train_features_relief)
+            },
+            "embeddings": {
+                "a": np.array(train_embeddings_all),
+                "b": np.array(train_embeddings_pca),
+                "c": np.array(train_embeddings_relief)
+            },
+            "labels": np.array(train_labels)
+        },
+        "validate": {
+            "features": {
+                "a": np.array(validate_features_all),
+                "b": np.array(validate_features_pca),
+                "c": np.array(validate_features_relief)
+            },
+            "embeddings": {
+                "a": np.array(validate_embeddings_all),
+                "b": np.array(validate_embeddings_pca),
+                "c": np.array(validate_embeddings_relief)
+            },
+            "labels": np.array(validate_labels)
+        },
+        "test": {
+            "features": {
+                "a": np.array(test_features_all),
+                "b": np.array(test_features_pca),
+                "c": np.array(test_features_relief)
+            },
+            "embeddings": {
+                "a": np.array(test_embeddings_all),
+                "b": np.array(test_embeddings_pca),
+                "c": np.array(test_embeddings_relief)
+            },
+            "labels": np.array(test_labels)
+        }
+    }
+
     return pipeline

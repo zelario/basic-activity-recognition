@@ -101,22 +101,21 @@ def partB ():
 
     '''# --- Exercise 3.1: Mixed splitting ---
 
-    train_dataset, validation_dataset, test_dataset = mixed_splitting(features, embeddings, labels)
+    split = mixed_splitting(features, embeddings, labels)
 
     # --- Exercise 3.2: Participant-based splitting ---
 
-    #train_dataset, validation_dataset, test_dataset = participant_splitting(features, embeddings, labels)
+    #split = participant_splitting(features, embeddings, labels)
 
     # --- Exercise 3.4: Pipeline training and evaluation ---
 
-    pipeline = prepare_pipeline(train_dataset, validation_dataset, test_dataset)
+    pipeline = prepare_pipeline(split["train"], split["validate"], split["test"])
 
     # --- Exercise 4.1: knn classifier ---
 
     k=3
-    #knn_model = my_knn_classifier(pipeline[0], scenario='a', k=k)
-    knn_model = sklearn_knn_classifier(pipeline[0], scenario='a', k=k)
-    metrics = validate_model(knn_model, pipeline[1], k=k)'''
+    knn_model = sklearn_knn_classifier(pipeline["train"][ "features"]["a"], pipeline["train"]["labels"], k=k)
+    metrics = validate_model(knn_model, pipeline["validate"]["features"]["a"], pipeline["validate"]["labels"], k=k)'''
 
     # --- Exercise 5.1: Hyperparameter Tuning ---
 
