@@ -96,8 +96,6 @@ def partB ():
     embeddings, embedding_labels = discard_activities(embeddings=embeddings, labels=embedding_labels)
 
     check_pairing(embeddings, features, labels, embedding_labels)
-    features, embeddings, labels = augment_dataset(features, embeddings, labels)
-    analyze_activity_balance(labels)
 
     '''# --- Exercise 3.1: Mixed splitting ---
 

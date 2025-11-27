@@ -127,50 +127,85 @@ def augment_activity_data(features, labels, activity=4, participant=3, n_samples
 
 	return synthetic_features
 
-def augment_dataset(features, embeddings, labels):
-	"""
-	Augment both features and embeddings using SMOTE to balance activity classes.
+def augment_dataset(train, random_state=None, k_neighbors=5, sampling_strategy='auto'):
+    """Augment training dataset using SMOTE applied to combined (features+embeddings) per scenario.
+    Returns new train dict with balanced features/embeddings per scenario and aligned full labels.
 
-	Parameters
-	----------
-	features : np.ndarray
-		Feature matrix (n_samples, n_features).
-	embeddings : np.ndarray
-		Embedding matrix (n_samples, n_embedding_features).
-	labels : np.ndarray
-		Label matrix (n_samples, 2): column 0 is activity, column 1 is participant.
+    Parameters
+    ----------
+    train : dict
+        train dict with keys "features" and "embeddings" (each a dict with scenarios 'a','b','c')
+        and "labels" (array, shape (n_samples, n_label_cols)). Uses first column as class label.
+    random_state : int or None
+        RNG seed for SMOTE and label sampling.
+    k_neighbors : int
+        SMOTE k_neighbors parameter.
+    sampling_strategy : str or dict
+        Sampling strategy for SMOTE.
+    """
+    rng = np.random.default_rng(random_state)
 
-	Returns
-	-------
-	augmented_features : np.ndarray
-		Augmented feature matrix after SMOTE.
-	augmented_embeddings : np.ndarray
-		Augmented embedding matrix after SMOTE.
-	augmented_labels : np.ndarray
-		Corresponding labels for augmented samples.
-	"""
-	
-	# Ensure all arrays have the same number of samples
-	n_samples = min(features.shape[0], embeddings.shape[0], labels.shape[0])
-	features = features[:n_samples]
-	embeddings = embeddings[:n_samples]
-	labels = labels[:n_samples]
+    labels = np.array(train["labels"])
+    if labels.ndim == 1:
+        labels = labels.reshape(-1, 1)
 
-	smote = SMOTE()
-	augmented_features, augmented_activity_labels = smote.fit_resample(features, labels[:, 0])
-	augmented_embeddings, _ = smote.fit_resample(embeddings, labels[:, 0])
+    # Use first column as class label
+    y = labels[:, 0]
 
-	# Reconstruct labels with random participant and device ids for synthetic samples
-	synthetic_count = augmented_activity_labels.shape[0] - labels.shape[0]
-	original_participant_ids = labels[:, 1].reshape(-1, 1)
-	rng = np.random.default_rng()
-	synthetic_participant_ids = rng.integers(1, 15, size=(synthetic_count, 1))
-	augmented_participant_ids = np.vstack((original_participant_ids, synthetic_participant_ids))
-	synthetic_device_ids = rng.integers(1, 6, size=(synthetic_count, 1))
-	augmented_device_ids = np.vstack((labels[:, 2].reshape(-1, 1), synthetic_device_ids))
-	augmented_labels = np.hstack((augmented_activity_labels.reshape(-1, 1), augmented_participant_ids, augmented_device_ids))
+    new_train = {"features": {}, "embeddings": {}, "labels": None}
 
-	return augmented_features, augmented_embeddings, augmented_labels
+    for scenario in ["a", "b", "c"]:
+        X_feat = np.array(train["features"][scenario])
+        X_emb = np.array(train["embeddings"][scenario])
+
+        # Ensure 2D
+        if X_feat.ndim == 1:
+            X_feat = X_feat.reshape(-1, 1)
+        if X_emb.ndim == 1:
+            X_emb = X_emb.reshape(-1, 1)
+
+        # Combine feature spaces so SMOTE preserves relation between features and embeddings
+        X_comb = np.hstack([X_feat.astype(float), X_emb.astype(float)])
+
+        sm = SMOTE(sampling_strategy=sampling_strategy, random_state=random_state, k_neighbors=k_neighbors)
+        X_res_comb, y_res = sm.fit_resample(X_comb, y)
+
+        # Split back into features and embeddings
+        n_feat_cols = X_feat.shape[1]
+        feat_res = X_res_comb[:, :n_feat_cols]
+        emb_res = X_res_comb[:, n_feat_cols:]
+
+        new_train["features"][scenario] = feat_res
+        new_train["embeddings"][scenario] = emb_res
+
+        # Build aligned full labels for this resampled set by sampling original full-label rows of same class
+        # For reproducibility, use rng.choice
+        unique_classes = np.unique(y_res)
+        resampled_full_labels = []
+        # Precompute indices per class
+        class_indices = {cls: np.where(y == cls)[0] for cls in unique_classes}
+        for cls in y_res:
+            idx_candidates = class_indices.get(cls)
+            # Should always exist, but guard
+            if idx_candidates is None or len(idx_candidates) == 0:
+                # fallback: pick a random row from labels
+                chosen_idx = rng.integers(0, labels.shape[0])
+            else:
+                chosen_idx = rng.choice(idx_candidates)
+            resampled_full_labels.append(labels[chosen_idx])
+
+        resampled_full_labels = np.vstack(resampled_full_labels)
+
+        # If first scenario, set new_train["labels"], else ensure labels shape matches and keep same labels
+        if new_train["labels"] is None:
+            new_train["labels"] = resampled_full_labels
+        else:
+            # Ensure that all scenarios produce the same number of samples; SMOTE should give same counts per scenario
+            if new_train["labels"].shape[0] != resampled_full_labels.shape[0]:
+                raise ValueError("SMOTE produced inconsistent sample counts across scenarios.")
+            # otherwise nothing to do (labels already set)
+
+    return new_train
 
 # --- Exercise 1.3: Visualize Synthetic vs Real Samples ---
 

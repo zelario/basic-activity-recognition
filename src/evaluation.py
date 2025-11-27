@@ -1,6 +1,7 @@
 from log import print_and_log
 from model_learning import sklearn_knn_classifier, validate_model
 from splitting import mixed_splitting, participant_splitting, prepare_pipeline
+from augmentation import augment_dataset
 import numpy as np
 
 def hyperparemeter_tuning(features, embeddings, labels, k_values=[1], n_splits=1):
@@ -42,6 +43,7 @@ def hyperparemeter_tuning(features, embeddings, labels, k_values=[1], n_splits=1
                         # Unpack datasets and labels from desired model
                         train_dataset = pipeline["train"][type][scenario]
                         train_labels = pipeline["train"]["labels"]
+
                         validate_dataset = pipeline["validate"][type][scenario]
                         validate_labels = pipeline["validate"]["labels"]
 
