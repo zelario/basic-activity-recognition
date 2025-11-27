@@ -8,7 +8,8 @@ def hyperparemeter_tuning(features, embeddings, labels, k_values=[1], n_splits=1
     print_and_log(f"\n--- Hyperparameter Tuning over {n_splits} different splits ---\n", path="log/hyperparameter_tuning.log")
     print_and_log(f"\n--- Hyperparameter Tuning best k values results ---\n")
 
-    metrics = [] 
+    metrics = []
+    metrics_labels = [] 
 
     # For each splitting method
     for method in ['mixed', 'participant']:
@@ -23,8 +24,6 @@ def hyperparemeter_tuning(features, embeddings, labels, k_values=[1], n_splits=1
             # For each scenario
             for scenario in ['a', 'b', 'c']:
 
-                k_accuracies = {(k): [] for k in k_values}
-
                 # For n_splits or number of splits
                 for i in range(n_splits):
 
@@ -33,49 +32,54 @@ def hyperparemeter_tuning(features, embeddings, labels, k_values=[1], n_splits=1
 
                     # Get split pipeline
                     pipeline = pipelines[i]
+                    
+                    # Blank accuracy list for each k
+                    k_accuracies = {(k): [] for k in k_values}
 
                     # For each k value
                     for k in k_values:
 
+                        # Unpack datasets and labels from desired model
                         train_dataset = pipeline["train"][type][scenario]
                         train_labels = pipeline["train"]["labels"]
                         validate_dataset = pipeline["validate"][type][scenario]
                         validate_labels = pipeline["validate"]["labels"]
 
+                        # Train knn model and validate
                         knn_model = sklearn_knn_classifier(train_dataset, train_labels, k=k)
                         iteration_metrics = validate_model(knn_model, validate_dataset, validate_labels, k=k, scenario=scenario, type=type, method=method)
+                        accuracy = iteration_metrics['accuracy']
 
-                        metrics.append((method, type, scenario, split_number, k, 
-                                        iteration_metrics['confusion_matrix'], iteration_metrics['accuracy'],
-                                        iteration_metrics['precision'], iteration_metrics['recall'], iteration_metrics['f1_score']))
+                        # Store accuracy for this k
+                        k_accuracies[(k)].append(accuracy)
+                        print_and_log(f"Method: {method}, Type: {type}, Scenario: {scenario}, Split= {split_number}, k= {k}, Accuracy: {accuracy:.4f}", path="log/hyperparameter_tuning.log")
 
-                        k_accuracies[(k)].append(iteration_metrics['accuracy'])
-                        print_and_log(f"Method: {method}, Type: {type}, Scenario: {scenario}, Split= {split_number}, k= {k}, Accuracy: {iteration_metrics['accuracy']:.4f}", path="log/hyperparameter_tuning.log")
+                    best_k = max(k_accuracies, key=lambda key: np.mean(k_accuracies[key]))
 
-                k_mean_accuracy = {k: (sum(accs)/len(accs) if accs else 0) for k, accs in k_accuracies.items()}
-                best_k_value = max(k_mean_accuracy, key=lambda k: k_mean_accuracy[k])
+                    # Retrain on combined train + validate, test on test set
+                    combined_dataset = np.concatenate([pipeline["train"][type][scenario], pipeline["validate"][type][scenario]], axis=0)
+                    combined_labels = np.concatenate([pipeline["train"]["labels"], pipeline["validate"]["labels"]], axis=0)
+                    test_dataset = pipeline["test"][type][scenario]
+                    test_labels = pipeline["test"]["labels"]
 
-                combined_data = np.concatenate([
-                    pipeline["train"][type][scenario],
-                    pipeline["validate"][type][scenario]
-                ], axis=0)
-                combined_labels = np.concatenate([
-                    pipeline["train"]["labels"],
-                    pipeline["validate"]["labels"]
-                ], axis=0)
-                new_train_dataset = (combined_data, combined_labels)
+                    # Final model training and evaluation
+                    knn_model = sklearn_knn_classifier(combined_dataset, combined_labels, k=best_k)
+                    iteration_metrics = validate_model(knn_model, test_dataset, test_labels, k=best_k, scenario=scenario, type=type, method=method)
 
-                knn_model = sklearn_knn_classifier(new_train_dataset, scenario=scenario, type=type, k=best_k_value)
+                    # Keep metrics and labels
+                    metrics.append((iteration_metrics['confusion_matrix'],
+                                    iteration_metrics['accuracy'], 
+                                    iteration_metrics['precision'], 
+                                    iteration_metrics['recall'], 
+                                    iteration_metrics['f1_score']))
+                    metrics_labels.append((method, type, scenario, best_k))
 
-                test_data = pipeline["test"][type][scenario]
-                test_labels = pipeline["test"]["labels"]
-                test_dataset = (test_data, test_labels)
-
-                iteration_metrics = validate_model(knn_model, test_dataset, k=best_k_value, scenario=scenario, type=type, method=method)
-                print_and_log(f"Method: {method}, Type: {type}, Scenario: {scenario}, k= {best_k_value}, Accuracy: {iteration_metrics['accuracy']:.4f}")
+                    print_and_log(f"Method: {method}, Type: {type}, Scenario: {scenario}, Split= {split_number}, k= {best_k}, Accuracy: {iteration_metrics['accuracy']:.4f}")
     
     metrics = np.array(metrics, dtype=object)
+    metrics_labels = np.array(metrics_labels, dtype=object)
     np.save("npy/metrics.npy", metrics)
+    np.save("npy/metrics_labels.npy", metrics_labels)
 
 # --- Exercise 5.2: Results Report ---
 

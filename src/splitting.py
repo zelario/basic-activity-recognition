@@ -30,14 +30,12 @@ def mixed_splitting(features, embeddings, labels):
 
     # First split: Train+Val and Test
     train_val_features, test_features, train_val_embeddings, test_embeddings, train_val_labels, test_labels = train_test_split(
-        features, embeddings, labels, test_size=0.2, random_state=None, stratify=labels[:, 0]
-    )
+        features, embeddings, labels, test_size=0.2, random_state=None, stratify=labels[:, 1])
 
     # Second split: Train and Val
     train_features, val_features, train_embeddings, validate_embeddings, train_labels, validate_labels = train_test_split(
-        train_val_features, train_val_embeddings, train_val_labels, test_size=0.2, random_state=None, stratify=train_val_labels[:, 0]
-    )
-
+        train_val_features, train_val_embeddings, train_val_labels, test_size=0.2, random_state=None, stratify=train_val_labels[:, 1])
+    
     train_dataset = np.array(train_features), np.array(train_embeddings), np.array(train_labels)
     validate_dataset = np.array(val_features), np.array(validate_embeddings), np.array(validate_labels)
     test_dataset = np.array(test_features), np.array(test_embeddings), np.array(test_labels)

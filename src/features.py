@@ -88,13 +88,15 @@ def normality_and_significance(dataset, variables_modules, alpha=0.05):
         else:
             print_and_log("Result: No significant differences between activities")
 
-def _sliding_windows(dataset, window_duration=5.0, overlap=0.5):
-    """Create windows, enforcing label/device/participant continuity.
+def _sliding_windows(dataset, fs=51.5, window_duration=5.0, overlap=0.5):
+    """Create windows, enforcing label/device/participant continuity and minimum sample count.
 
     Parameters
     ----------
     dataset : matrix, shape (n_samples, 13)
         Raw data matrix with timestamp and label columns.
+    fs : float, optional
+        Approximate sampling frequency in Hz (default=51.5).
     window_duration : float, optional
         Duration of each window in seconds (default=5.0).
     overlap : float, optional
@@ -105,7 +107,6 @@ def _sliding_windows(dataset, window_duration=5.0, overlap=0.5):
     windows : list of tuples
         Each tuple is (start_idx, end_idx, activity_id, participant_id, device_id)."""
 
-    # Extract id and timestamp columns
     activity_ids = np.asarray(dataset[:, 11]).astype(int)
     device_ids = np.asarray(dataset[:, 0]).astype(int)
     participant_ids = np.asarray(dataset[:, 12]).astype(int)
@@ -116,7 +117,8 @@ def _sliding_windows(dataset, window_duration=5.0, overlap=0.5):
     windows = []
     start = 0
 
-    # Slide over dataset
+    minimum_samples = int(0.5 * window_duration * fs)  # 50% of expected samples
+
     while start < dataset_length:
 
         activity = activity_ids[start]
@@ -132,7 +134,8 @@ def _sliding_windows(dataset, window_duration=5.0, overlap=0.5):
                timestamps[end] - timestamps[start] < window_duration_ms):
             end += 1
 
-        if end - start > 1:
+        # Only append windows that meet minimum sample count
+        if end - start >= minimum_samples:
             windows.append((start, end, activity, participant, device))
 
         # Overlap
@@ -143,6 +146,7 @@ def _sliding_windows(dataset, window_duration=5.0, overlap=0.5):
             start = end
 
     return windows
+
 
 def _extract_window_features(signal):
     """Compute features for a window.
@@ -233,10 +237,6 @@ def extract_features(dataset, variables_modules, window_duration=5.0, overlap_ra
         acc_window = acceleration_modules[start_idx:end_idx]
         gyro_window = gyroscope_modules[start_idx:end_idx]
         mag_window = magnetic_modules[start_idx:end_idx]
-
-        minimum_samples = 20 
-        if acc_window.size < minimum_samples or gyro_window.size < minimum_samples or mag_window.size < minimum_samples:
-            continue
 
         # For each variable, extract features
         acc_features = _extract_window_features(acc_window)
