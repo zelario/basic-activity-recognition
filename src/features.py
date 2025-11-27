@@ -213,8 +213,7 @@ def extract_features(dataset, variables_modules, window_duration=5.0, overlap_ra
     features : matrix, shape (n_windows, n_features)
         Feature matrix, one row per valid window.
     labels : matrix, shape (n_windows, 3)
-        Integer matrix: (activity_label, participant_id, device_id) for each window.
-    """
+        Integer matrix: (activity_label, participant_id, device_id) for each window."""
 
     # Create windows
     windows = _sliding_windows(dataset, window_duration, overlap_ratio)
