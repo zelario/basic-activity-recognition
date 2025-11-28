@@ -59,8 +59,8 @@ def hyperparemeter_tuning(features, embeddings, labels, k_values=[1], n_splits=1
                     best_k = max(k_accuracies, key=lambda key: np.mean(k_accuracies[key]))
 
                     # Retrain on combined train + validate, test on test set
-                    combined_dataset = np.concatenate([pipeline["train"][type][scenario], pipeline["validate"][type][scenario]], axis=0)
-                    combined_labels = np.concatenate([pipeline["train"]["labels"], pipeline["validate"]["labels"]], axis=0)
+                    combined_dataset = pipeline["combined"][type][scenario]
+                    combined_labels = pipeline["combined"]["labels"]
                     test_dataset = pipeline["test"][type][scenario]
                     test_labels = pipeline["test"]["labels"]
 
