@@ -391,48 +391,36 @@ def fisher(features, labels):
         name = FEATURES_NAMES[sorted_idx[i]] if FEATURES_NAMES else f"feature_{sorted_idx[i]}"
         print_and_log(f"{i+1:02d}. {name:>20s}  |  score = {sorted_scores[i]:.4f}")
 
-def relief(dataset, labels, n_neighbors=50, n_samples=500, top_n=10, print_output=True):
-    """Approximate ReliefF feature ranking using random sampling.
-
-    For each of n_samples randomly chosen instances, computes average distance to n_neighbors hits (same class) 
-    and misses (different class).The difference (miss - hit) is accumulated for each feature, higher scores 
-    indicate stronger discrimination.
-
-    Parameters
-    ----------
-    features : matrix, shape (n_samples, n_features)
-        Feature matrix.
-    labels : matrix, shape (n_samples, 3)
-        First column is class label.
-    n_neighbors : int, optional
-        Number of neighbors for hit/miss estimation (default=50).
-    n_samples : int, optional
-        Number of random samples to draw (default=500).
-    top_n : int, optional
-        Number of top features to return (default=10).
-
-    Returns
-    -------
-    top_indices : array, shape (top_n)
-        Indices of top n features sorted by ReliefF score."""
-    
+def relief(dataset, labels, n_samples=500, top_n=10, print_output=True):
+    """Classic Relief feature ranking using single nearest hit/miss per sample."""
     n_total = dataset.shape[0]
     n_features = dataset.shape[1]
-    sample_indixes = np.random.choice(n_total, min(n_samples, n_total), replace=False)
-    features_sample = dataset[sample_indixes]
-    labels_sample = labels[sample_indixes, 0]
+    sample_indices = np.random.choice(n_total, min(n_samples, n_total), replace=False)
+    features_sample = dataset[sample_indices]
+    labels_sample = labels[sample_indices, 0]
 
     nominator = np.zeros(n_features)
 
-    for i, j in enumerate(features_sample):
+    for i, instance in enumerate(features_sample):
         same_mask = labels_sample == labels_sample[i]
         diff_mask = labels_sample != labels_sample[i]
 
-        same_idx = np.random.choice(np.where(same_mask)[0], min(n_neighbors, np.sum(same_mask)), replace=True)
-        diff_idx = np.random.choice(np.where(diff_mask)[0], min(n_neighbors, np.sum(diff_mask)), replace=True)
+        # Exclude the instance itself for hit
+        same_indices = np.where(same_mask)[0]
+        same_indices = same_indices[same_indices != i]
+        diff_indices = np.where(diff_mask)[0]
 
-        hit_diff = np.mean(np.abs(features_sample[same_idx] - j), axis=0)
-        miss_diff = np.mean(np.abs(features_sample[diff_idx] - j), axis=0)
+        if same_indices.size > 0:
+            hit_idx = same_indices[np.argmin(np.linalg.norm(features_sample[same_indices] - instance, axis=1))]
+            hit_diff = np.abs(features_sample[hit_idx] - instance)
+        else:
+            hit_diff = np.zeros(n_features)
+
+        if diff_indices.size > 0:
+            miss_idx = diff_indices[np.argmin(np.linalg.norm(features_sample[diff_indices] - instance, axis=1))]
+            miss_diff = np.abs(features_sample[miss_idx] - instance)
+        else:
+            miss_diff = np.zeros(n_features)
 
         nominator += miss_diff - hit_diff
 
@@ -443,7 +431,7 @@ def relief(dataset, labels, n_neighbors=50, n_samples=500, top_n=10, print_outpu
     top_indices = sorted_idx[:top_n]
 
     if print_output:
-        print_and_log("\n========== ReliefF ==========")
+        print_and_log("\n========== Relief ==========")
         for rank, idx in enumerate(top_indices):
             name = FEATURES_NAMES[idx]
             print_and_log(f"{rank+1:02d}. {name:>20s}  |  score = {sorted_scores[rank]:.4f} (index {idx})")
