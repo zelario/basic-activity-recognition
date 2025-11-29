@@ -116,7 +116,8 @@ def _sliding_windows(dataset, window_duration=5.0, overlap=0.5):
     windows = []
     start = 0
 
-    # Slide over dataset
+    minimum_window_size = 20
+
     while start < dataset_length:
 
         activity = activity_ids[start]
@@ -132,7 +133,7 @@ def _sliding_windows(dataset, window_duration=5.0, overlap=0.5):
                timestamps[end] - timestamps[start] < window_duration_ms):
             end += 1
 
-        if end - start > 1:
+        if end - start >= minimum_window_size:
             windows.append((start, end, activity, participant, device))
 
         # Overlap
@@ -194,7 +195,7 @@ def _extract_window_features(signal):
 
     return feature_values
 
-def extract_features(dataset, variables_modules, window_duration=5.0, overlap_ratio=0.5):
+def extract_features(dataset, variables_modules, window_duration=5.0, overlap=0.5):
     """Extract features per window for acceleration, gyroscope, and magnetometer modules.
 
     Parameters
@@ -205,7 +206,7 @@ def extract_features(dataset, variables_modules, window_duration=5.0, overlap_ra
         Modules aligned with dataset rows.
     window_duration : float, optional
         Duration of each window in seconds (default=5.0).
-    overlap_ratio : float, optional
+    overlap : float, optional
         Overlap ratio between consecutive windows (default=0.5).
 
     Returns
@@ -216,7 +217,7 @@ def extract_features(dataset, variables_modules, window_duration=5.0, overlap_ra
         Integer matrix: (activity_label, participant_id, device_id) for each window."""
 
     # Create windows
-    windows = _sliding_windows(dataset, window_duration, overlap_ratio)
+    windows = _sliding_windows(dataset, window_duration, overlap)
 
     features = []
     labels = []
