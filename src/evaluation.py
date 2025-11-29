@@ -1,3 +1,15 @@
+"""
+Model evaluation, statistical tests and visualization utilities.
+File used for modulo B exercise 5.
+
+This file contains functions used in the project for:
+- k-NN hyperparameter tuning and model selection,
+- saving and loading model performance metrics,
+- performing paired and independent hypothesis tests to compare models,
+- visualizing performance distributions with KDE plots,
+- reporting results and statistical significance.
+"""
+
 from log import print_and_log
 from model_learning import sklearn_knn_classifier, validate_model
 from splitting import mixed_splitting, participant_splitting, prepare_pipeline
@@ -16,6 +28,22 @@ MODEL_NAMES = [
 ]
 
 def hyperparemeter_tuning(features, embeddings, labels, k_values=[1], n_splits=1):
+    """Run k-NN hyperparameter tuning and model selection for all scenarios, types, and splitting methods.
+    For each method (mixed, participant), type (features, embeddings), and scenario (a, b, c), performs n_splits random splits, 
+    trains k-NN models for each k, selects the best k, retrains on combined train+validate, and evaluates on the test set. Saves all metrics to npy/metrics.npy.
+
+    Parameters
+    ----------
+    features : matrix, shape (n_samples, n_features)
+        Feature matrix for all samples.
+    embeddings : matrix, shape (n_samples, n_features)
+        Embedding matrix for all samples.
+    labels : matrix, shape (n_samples, 3)
+        Labels for all samples.
+    k_values : list, optional
+        List of k values to test (default=[1]).
+    n_splits : int, optional
+        Number of splits to perform (default=1)."""
 
     print_and_log(f"\n--- Hyperparameter Tuning over {n_splits} different splits ---\n", path="log/hyperparameter_tuning.log")
     print_and_log(f"\n--- Hyperparameter Tuning best k values results ---\n")
@@ -107,6 +135,18 @@ embeddings, que já encapsulam informação relevante.
 '''
 
 def paired_hypothesis_test(method, metrics=None, chosen_metric='accuracy'):
+    """Perform paired hypothesis tests and KDE visualizations for all pairs of models within a method (mixed or participant).
+    For each pair of models (type and scenario) in the selected method, performs a paired t-test and plots the distribution of the chosen metric for each model.
+    Shows 15 pairwise comparisons in a grid of subplots.
+
+    Parameters
+    ----------
+    method : str
+        Splitting method ('mixed' or 'participant').
+    metrics : dict, optional
+        Dictionary of saved metrics (default: loads from npy/metrics.npy).
+    chosen_metric : str, optional
+        Metric to compare (default='accuracy')."""
 
     try:
         metrics = np.load("npy/metrics.npy", allow_pickle=True).item()
@@ -156,6 +196,16 @@ def paired_hypothesis_test(method, metrics=None, chosen_metric='accuracy'):
 
 
 def independent_hypothesis_test(metrics=None, chosen_metric='accuracy'):
+    """Perform independent hypothesis tests and KDE visualizations comparing mixed vs participant versions of each model.
+    For each scenario and type, performs an independent t-test and plots the distribution of the chosen metric for mixed and participant models.
+    Shows 6 comparisons in subplots.
+
+    Parameters
+    ----------
+    metrics : dict, optional
+        Dictionary of saved metrics (default: loads from npy/metrics.npy).
+    chosen_metric : str, optional
+        Metric to compare (default='accuracy')."""
 
     try:
         metrics = np.load("npy/metrics.npy", allow_pickle=True).item()
