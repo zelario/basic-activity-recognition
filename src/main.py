@@ -6,9 +6,9 @@ from features import *
 from augmentation import *
 from embeddings import *
 from splitting import *
-from model_learning import *
+from models import *
 from evaluation import *
-
+from deployment import *
 
 def partA ():
 
@@ -116,16 +116,22 @@ def partB ():
     knn_model = sklearn_knn_classifier(pipeline["train"][ "features"]["a"], pipeline["train"]["labels"], k=k)
     metrics = validate_model(knn_model, pipeline["validate"]["features"]["a"], pipeline["validate"]["labels"], k=k)'''
 
-    # --- Exercise 5.1: Hyperparameter Tuning ---
+    '''# --- Exercise 5.1: Hyperparameter Tuning ---
 
-    hyperparemeter_tuning(features, embeddings, labels, k_values=[1, 3, 5, 7, 11, 13, 17, 19], n_splits=10)
+    hyperparemeter_tuning(features, embeddings, labels, k_values=[17, 19, 67, 101], n_splits=10)
 
     # --- Exercise 5.2: Hypothesis Testing ---
 
     paired_hypothesis_test("mixed", chosen_metric="f1_score")
     paired_hypothesis_test("participant", chosen_metric="f1_score")
 
-    independent_hypothesis_test(chosen_metric="f1_score")
+    independent_hypothesis_test(chosen_metric="f1_score")'''
+
+    # --- Exercise 6: Deployment ---
+
+    sample_dataset = get_random_sample(dataset)
+
+    my_model(sample_dataset)
 
 if __name__ == "__main__":
 

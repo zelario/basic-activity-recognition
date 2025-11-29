@@ -11,7 +11,7 @@ This file contains functions used in the project for:
 """
 
 from log import print_and_log
-from model_learning import sklearn_knn_classifier, validate_model
+from models import sklearn_knn_classifier, validate_model
 from splitting import mixed_splitting, participant_splitting, prepare_pipeline
 import numpy as np
 from scipy.stats import ttest_rel, ttest_ind

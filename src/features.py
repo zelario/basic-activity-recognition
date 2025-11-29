@@ -392,7 +392,26 @@ def fisher(features, labels):
         print_and_log(f"{i+1:02d}. {name:>20s}  |  score = {sorted_scores[i]:.4f}")
 
 def relief(dataset, labels, n_samples=500, top_n=10, print_output=True):
-    """Classic Relief feature ranking using single nearest hit/miss per sample."""
+    """Classic Relief feature ranking using single nearest hit/miss per sample.
+    
+    Parameters
+    ----------
+    dataset : matrix, shape (n_samples, n_features)
+        Feature matrix.
+    labels : matrix, shape (n_samples, 3)
+        First column is activity label.
+    n_samples : int, optional
+        Number of random samples to use for Relief (default=500).
+    top_n : int, optional
+        Number of top features to print (default=10).
+    print_output : bool, optional
+        Whether to print the top features (default=True).
+
+    Returns
+    -------
+    top_indices : array, shape (top_n)
+        Indices of the top_n ranked features."""
+    
     n_total = dataset.shape[0]
     n_features = dataset.shape[1]
     sample_indices = np.random.choice(n_total, min(n_samples, n_total), replace=False)
