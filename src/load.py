@@ -79,8 +79,7 @@ def save_data(dataset, features, labels):
     np.save("npy/feature_labels.npy", labels)
     
 def reload_data():
-	"""
-	Load or recompute cached feature artifacts from the `data/` folder.
+	"""Load or recompute cached feature artifacts from the `data/` folder.
 	Loads precomputed numpy arrays if available; otherwise, recomputes features from raw data and saves them.
 
 	Returns
@@ -90,8 +89,7 @@ def reload_data():
 	features : np.ndarray, shape (n_windows, n_features)
 		Feature matrix.
 	labels : np.ndarray, shape (n_windows, 2)
-		Integer array: column 0 is activity, column 1 is participant ID.
-	"""
+		Integer array: column 0 is activity, column 1 is participant ID."""
 	
 	try:
 		dataset = np.load("npy/dataset.npy", allow_pickle=True)

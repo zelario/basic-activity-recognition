@@ -118,7 +118,7 @@ def partB ():
 
     # --- Exercise 5.1: Hyperparameter Tuning ---
 
-    '''hyperparemeter_tuning(features, embeddings, labels, k_values=[1, 3, 5, 7, 11, 13, 17, 19], n_splits=10)'''
+    #hyperparemeter_tuning(features, embeddings, labels, k_values=[1, 3, 5, 7, 11, 13, 17, 19], n_splits=10)
 
     # --- Exercise 5.2: Hypothesis Testing ---
 
