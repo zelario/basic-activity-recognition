@@ -1,16 +1,26 @@
 from log import print_and_log
 from model_learning import sklearn_knn_classifier, validate_model
 from splitting import mixed_splitting, participant_splitting, prepare_pipeline
-from augmentation import augment_dataset
 import numpy as np
+from scipy.stats import ttest_rel, ttest_ind
+import matplotlib.pyplot as plt
+import seaborn as sns
+
+MODEL_NAMES = [
+    'Mixed-Features-A', 'Mixed-Embeddings-A',
+    'Mixed-Features-B', 'Mixed-Embeddings-B',
+    'Mixed-Features-C', 'Mixed-Embeddings-C',
+    'Participant-Features-A', 'Participant-Embeddings-A',
+    'Participant-Features-B', 'Participant-Embeddings-B',
+    'Participant-Features-C', 'Participant-Embeddings-C'
+]
 
 def hyperparemeter_tuning(features, embeddings, labels, k_values=[1], n_splits=1):
 
     print_and_log(f"\n--- Hyperparameter Tuning over {n_splits} different splits ---\n", path="log/hyperparameter_tuning.log")
     print_and_log(f"\n--- Hyperparameter Tuning best k values results ---\n")
 
-    metrics = []
-    metrics_labels = [] 
+    metrics = {(method, type, scenario): [] for method in ['mixed', 'participant'] for type in ['features', 'embeddings'] for scenario in ['a', 'b', 'c']}
 
     # For each splitting method
     for method in ['mixed', 'participant']:
@@ -69,19 +79,11 @@ def hyperparemeter_tuning(features, embeddings, labels, k_values=[1], n_splits=1
                     iteration_metrics = validate_model(knn_model, test_dataset, test_labels, k=best_k, scenario=scenario, type=type, method=method)
 
                     # Keep metrics and labels
-                    metrics.append((iteration_metrics['confusion_matrix'],
-                                    iteration_metrics['accuracy'], 
-                                    iteration_metrics['precision'], 
-                                    iteration_metrics['recall'], 
-                                    iteration_metrics['f1_score']))
-                    metrics_labels.append((method, type, scenario, best_k))
+                    metrics[(method, type, scenario)].append(iteration_metrics)
 
                     print_and_log(f"Method: {method}, Type: {type}, Scenario: {scenario}, Split= {split_number}, k= {best_k}, Accuracy: {iteration_metrics['accuracy']:.4f}")
     
-    metrics = np.array(metrics, dtype=object)
-    metrics_labels = np.array(metrics_labels, dtype=object)
     np.save("npy/metrics.npy", metrics)
-    np.save("npy/metrics_labels.npy", metrics_labels)
 
 # --- Exercise 5.2: Results Report ---
 
@@ -99,7 +101,99 @@ superiores. Portanto, embeddings são o melhor dataset para classificação das 
 
 3. Seleção de features e impacto na performance:
 
-O melhor desempenho ocorre para k=1, sugerindo que uma seleção mais restrita (menos vizinhos ou features mais relevantes) melhora a classificação. A remoção de outliers no início 
+O melhor desempenho ocorre para k=1, sugerindo que uma seleção mais restrita (menos vizinhos ou features mai s relevantes) melhora a classificação. A remoção de outliers no início 
 do processamento contribuiu para este resultado, tornando o k-NN com k=1 mais fiável. A seleção de features, por si só, não trouxe melhorias significativas em relação ao uso de 
 embeddings, que já encapsulam informação relevante.
 '''
+
+def paired_hypothesis_test(method, metrics=None, chosen_metric='accuracy'):
+
+    try:
+        metrics = np.load("npy/metrics.npy", allow_pickle=True).item()
+    except FileNotFoundError:
+        print_and_log("Metrics file not found. Please run hyperparameter_tuning() first.")
+        return
+    
+    print_and_log(f"\n--- Paired hypothesis test for method: {method} using metric: {chosen_metric} ---\n")
+
+    model_keys = [
+        (method, 'features', 'a'),
+        (method, 'embeddings', 'a'),
+        (method, 'features', 'b'),
+        (method, 'embeddings', 'b'),
+        (method, 'features', 'c'),
+        (method, 'embeddings', 'c')
+    ]
+
+    values = [[model_metrics[chosen_metric] for model_metrics in metrics[key]] for key in model_keys]
+
+    pairs = []
+    for i in range(len(model_keys)):
+        for j in range(i+1, len(model_keys)):
+            pairs.append((i, j))
+
+    fig, axs = plt.subplots(5, 3, figsize=(9, 12))
+    axs = axs.flatten()
+
+    for subplot_idx, (i, j) in enumerate(pairs):
+        ax = axs[subplot_idx]
+        sns.kdeplot(values[i], label=MODEL_NAMES[i], fill=True, ax=ax)
+        sns.kdeplot(values[j], label=MODEL_NAMES[j], fill=True, ax=ax)
+
+        stat, p_value = ttest_rel(values[i], values[j])
+
+        ax.text(0.95, 0.95, f'p={p_value:.4f}', transform=ax.transAxes, ha='right', va='top', fontsize=9, bbox=dict(facecolor='white', alpha=0.7, edgecolor='none'))
+        ax.set_xlabel(chosen_metric.capitalize(), fontsize=8)
+        ax.set_ylabel('Density', fontsize=8)
+        ax.grid(True)
+        ax.legend(loc='upper left', fontsize=7)
+
+        print_and_log(f"{MODEL_NAMES[i]} vs {MODEL_NAMES[j]}: p-value = {p_value:.4f}")
+
+    plt.tight_layout(rect=[0, 0, 1, 0.97])
+    plt.suptitle(f'{method.capitalize()} Model Comparisons (All Pairs)', y=0.995)
+    plt.show()
+
+
+def independent_hypothesis_test(metrics=None, chosen_metric='accuracy'):
+
+    try:
+        metrics = np.load("npy/metrics.npy", allow_pickle=True).item()
+    except FileNotFoundError:
+        print_and_log("Metrics file not found. Please run hyperparameter_tuning() first.")
+        return
+
+    print_and_log(f"\n--- Independent hypothesis test: Mixed vs Participant ---\n")
+
+    scenarios = ['a', 'b', 'c']
+    types = ['features', 'embeddings']
+
+    fig, axs = plt.subplots(2, 3, figsize=(14, 8))
+    axs = axs.flatten()
+
+    for index, (scenario, type) in enumerate([(s, t) for s in scenarios for t in types]):
+
+        mixed_index = index
+        participant_index = index + 6
+        mixed_name = MODEL_NAMES[mixed_index]
+        participant_name = MODEL_NAMES[participant_index]
+
+        mixed_values = [model_metrics[chosen_metric] for model_metrics in metrics[('mixed', type, scenario)]]
+        participant_values = [model_metrics[chosen_metric] for model_metrics in metrics[('participant', type, scenario)]]
+
+        stat, p_value = ttest_ind(mixed_values, participant_values)
+        ax = axs[index]
+
+        sns.kdeplot(mixed_values, label=mixed_name, fill=True, ax=ax)
+        sns.kdeplot(participant_values, label=participant_name, fill=True, ax=ax)
+        ax.set_xlabel(chosen_metric.capitalize(), fontsize=9)
+        ax.set_ylabel('Density', fontsize=9)
+        ax.text(0.95, 0.95, f'p={p_value:.4f}', transform=ax.transAxes, ha='right', va='top', fontsize=9, bbox=dict(facecolor='white', alpha=0.7, edgecolor='none'))
+        ax.legend(loc='upper left', fontsize=8)
+        ax.grid(True)
+
+        print_and_log(f"{mixed_name} vs {participant_name}: p-value = {p_value:.4f}")
+
+    plt.tight_layout(rect=[0, 0, 1, 0.97])
+    plt.suptitle('Mixed vs Participant Model Comparisons (All Versions)', y=0.995)
+    plt.show()
