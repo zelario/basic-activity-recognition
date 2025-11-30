@@ -9,7 +9,6 @@ from splitting import *
 from models import *
 from evaluation import *
 from deployment import *
-from deployment import _get_random_sample
 
 def partA ():
 
@@ -130,7 +129,7 @@ def partB ():
 
     # --- Exercise 6: Deployment ---
 
-    sample_dataset = _get_random_sample(dataset)
+    sample_dataset = get_random_sample(dataset)
 
     my_model(sample_dataset)
 

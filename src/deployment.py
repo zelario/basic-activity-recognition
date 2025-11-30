@@ -7,7 +7,7 @@ import numpy as np
 
 import numpy as np
 
-def _get_random_sample(dataset):
+def get_random_sample(dataset):
 
     # Only consider activities 1 to 7
     activities_mask = (dataset[:, 11] >= 1) & (dataset[:, 11] <= 7)
@@ -37,7 +37,7 @@ def _get_random_sample(dataset):
         sample = shuffled_group[:256, 1:10]
         return sample
     else:
-        return _get_random_sample(dataset)
+        return get_random_sample(dataset)
 
 def _format_sample(sample_dataset):
     formated_sample = np.zeros((256, 13))
@@ -81,6 +81,6 @@ def my_model(sample_dataset):
     knn_model = sklearn_knn_classifier(model_features_relief, model_labels, k=19)
     predicted_labels = knn_model.predict(sample_features_relief)
 
-    print_and_log(f"Predicted label for the sample dataset: {predicted_labels}\n")
+    print_and_log(f"Predicted label for the sample dataset: {predicted_labels}")
 
     pass
