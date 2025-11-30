@@ -3,8 +3,7 @@ from features import *
 from outliers import *
 from embeddings import *
 from models import *
-import numpy as np
-
+from augmentation import *
 import numpy as np
 
 def get_random_sample(dataset):
@@ -22,6 +21,7 @@ def get_random_sample(dataset):
     participant = np.random.choice(participants)
     device = np.random.choice(devices)
 
+    print_and_log("\n--- Random Sample Generation ---")
     print_and_log("\nChoosing random sample from activity:", int(activity))
 
     mask = (
@@ -53,12 +53,13 @@ def _format_sample(sample_dataset):
 def my_model(sample_dataset):
     """Deploy my model to make predictions on a sample dataset."""
 
-    print_and_log("\n--- Deployment: Making predictions on sample dataset ---\n")
+    print_and_log("\n--- Making predictions on sample dataset ---\n")
 
     try:
         model_features = np.load("npy/features.npy", allow_pickle=True)
         model_labels = np.load("npy/feature_labels.npy", allow_pickle=True)
         model_features, model_labels = discard_activities(features=model_features, labels=model_labels)
+        model_features, model_labels = augment_dataset(model_features, model_labels)
     except FileNotFoundError:
         return
     
@@ -67,7 +68,7 @@ def my_model(sample_dataset):
 
     # Extract features from sample 
     sample_variables_modules = compute_modules(sample_dataset)
-    sample_features, sample_labels = extract_features(sample_dataset, sample_variables_modules, overlap=0.0)
+    sample_features, _ = extract_features(sample_dataset, sample_variables_modules, overlap=0.0)
     
     # Select top 15 features using Relief for both model and sample features
     normalized_model_features, model_features_mean, model_features_std = zscore_normalization(model_features, return_parameters=True)
