@@ -24,13 +24,17 @@ import matplotlib.pyplot as plt
 from scipy.stats import kstest, f_oneway, kruskal
 from sklearn.decomposition import PCA
 
+AXES = ["X", "Y", "Z"]
+SENSORS = ["Acceleration", "Gyroscope", "Magnetometer"]
+FEATURES = [
+    "Mean", "Std", "Median", "Variance", "RMS", "Average Deviation", "Skewness",
+    "Kurtosis", "IQR", "Zero Crossing Rate", "Mean Crossing Rate", "Spectral Entropy"
+]
 FEATURES_NAMES = [
-    "Acceleration Mean", "Acceleration Std", "Acceleration Median", "Acceleration Variance", "Acceleration RMS", "Acceleration Average Deviation", "Acceleration Skewness", 
-    "Acceleration Kurtosis", "Acceleration IQR", "Acceleration Zero Crossing Rate", "Acceleration Mean Crossing Rate", "Acceleration Spectral Entropy",
-    "Gyroscope Mean", "Gyroscope Std", "Gyroscope Median", "Gyroscope Variance", "Gyroscope RMS", "Gyroscope Average Deviation", "Gyroscope Skewness", 
-    "Gyroscope Kurtosis", "Gyroscope IQR", "Gyroscope Zero Crossing Rate", "Gyroscope Mean Crossing Rate", "Gyroscope Spectral Entropy",
-    "Magnetometer Mean", "Magnetometer Std", "Magnetometer Median", "Magnetometer Variance", "Magnetometer RMS", "Magnetometer Average Deviation", "Magnetometer Skewness", 
-    "Magnetometer Kurtosis", "Magnetometer IQR", "Magnetometer Zero Crossing Rate", "Magnetometer Mean Crossing Rate", "Magnetometer Spectral Entropy"
+    f"{sensor} {axis} {feature}"
+    for sensor in SENSORS
+    for axis in AXES
+    for feature in FEATURES
 ]
 
 # --- Exercise 4.1: Statistical Tests ---
@@ -88,7 +92,7 @@ def normality_and_significance(dataset, variables_modules, alpha=0.05):
         else:
             print_and_log("Result: No significant differences between activities")
 
-def _sliding_windows(dataset, window_duration=5.0, overlap=0.5):
+def sliding_windows(dataset, window_duration=5.0, overlap=0.5):
     """Create windows, enforcing label/device/participant continuity.
 
     Parameters
@@ -145,7 +149,7 @@ def _sliding_windows(dataset, window_duration=5.0, overlap=0.5):
 
     return windows
 
-def _extract_window_features(signal):
+def compute_features(signal):
     """Compute features for a window.
 
     Features (in order): mean, std, median, variance, rms, average deviation, skewness, 
@@ -195,7 +199,7 @@ def _extract_window_features(signal):
 
     return feature_values
 
-def extract_features(dataset, variables_modules, window_duration=5.0, overlap=0.5):
+def extract_features(dataset, window_duration=5.0, overlap=0.5):
     """Extract features per window for acceleration, gyroscope, and magnetometer modules.
 
     Parameters
@@ -217,33 +221,50 @@ def extract_features(dataset, variables_modules, window_duration=5.0, overlap=0.
         Integer matrix: (activity_label, participant_id, device_id) for each window."""
 
     # Create windows
-    windows = _sliding_windows(dataset, window_duration, overlap)
+    windows = sliding_windows(dataset, window_duration, overlap)
 
     features = []
     labels = []
 
-    acceleration_modules = variables_modules[0]
-    gyroscope_modules = variables_modules[1]
-    magnetic_modules = variables_modules[2]
-
-    # For each window, extract features
+    # For each window, extract features for each axis
     for (start_idx, end_idx, activity_label, participant, device) in windows:
+        window_data = dataset[start_idx:end_idx]
 
-        # Get variable windows
-        acc_window = acceleration_modules[start_idx:end_idx]
-        gyro_window = gyroscope_modules[start_idx:end_idx]
-        mag_window = magnetic_modules[start_idx:end_idx]
+        # Acceleration x, y, z
+        acc_x = window_data[:, 1]
+        acc_y = window_data[:, 2]
+        acc_z = window_data[:, 3]
 
-        # For each variable, extract features
-        acc_features = _extract_window_features(acc_window)
-        gyro_features = _extract_window_features(gyro_window)
-        mag_features = _extract_window_features(mag_window)
+        # Gyroscope x, y, z
+        gyro_x = window_data[:, 4]
+        gyro_y = window_data[:, 5]
+        gyro_z = window_data[:, 6]
 
-        # Combine features from all variables
-        combined_features = acc_features + gyro_features + mag_features
+        # Magnetometer x, y, z
+        mag_x = window_data[:, 7]
+        mag_y = window_data[:, 8]
+        mag_z = window_data[:, 9]
+
+        # Extract features for each axis
+        acc_x_features = compute_features(acc_x)
+        acc_y_features = compute_features(acc_y)
+        acc_z_features = compute_features(acc_z)
+        gyro_x_features = compute_features(gyro_x)
+        gyro_y_features = compute_features(gyro_y)
+        gyro_z_features = compute_features(gyro_z)
+        mag_x_features = compute_features(mag_x)
+        mag_y_features = compute_features(mag_y)
+        mag_z_features = compute_features(mag_z)
+
+        # Combine all features (order: acc_x, acc_y, acc_z, gyro_x, gyro_y, gyro_z, mag_x, mag_y, mag_z)
+        combined_features = (
+            acc_x_features + acc_y_features + acc_z_features +
+            gyro_x_features + gyro_y_features + gyro_z_features +
+            mag_x_features + mag_y_features + mag_z_features
+        )
 
         # Append labels and features
-        participant = int(dataset[start_idx, 12]) 
+        participant = int(dataset[start_idx, 12])
         labels.append((activity_label, participant, device))
         features.append(combined_features)
 

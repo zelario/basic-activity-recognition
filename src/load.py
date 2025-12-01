@@ -101,7 +101,7 @@ def reload_data():
 		variables_modules = compute_modules(dataset)
 		dataset, variables_modules = remove_outliers(dataset, variables_modules)
 
-		features, labels = extract_features(dataset, variables_modules, window_duration=5.0, overlap_ratio=0.5)
+		features, labels = extract_features(dataset, window_duration=5.0, overlap=0.5)
 
 		np.save("npy/dataset.npy", dataset)
 		np.save("npy/features.npy", features)

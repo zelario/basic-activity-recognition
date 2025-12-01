@@ -52,7 +52,7 @@ def partA ():
 
     dataset, variables_modules = remove_outliers(dataset, variables_modules)
     
-    features, labels = extract_features(dataset, variables_modules, window_duration=5.0, overlap_ratio=0.5)
+    features, labels = extract_features(dataset, window_duration=5.0, overlap_ratio=0.5)
     features = zscore_normalization(features)
 
     '''# --- Exercise 4.3: PCA ---

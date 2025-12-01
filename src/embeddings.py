@@ -1,7 +1,7 @@
 import torch
 import numpy as np
 
-from features import _sliding_windows
+from features import sliding_windows
 from log import print_and_log
 
 ########################### PROVIDED CODE ###########################
@@ -89,7 +89,7 @@ def compute_embeddings(dataset, fs=51.5, window_duration=5.0, overlap_ratio=0.5)
     except FileNotFoundError:
 
         # Use the same sliding window function to ensure pairing with features pca and labels
-        windows = _sliding_windows(dataset, window_duration, overlap_ratio)
+        windows = sliding_windows(dataset, window_duration, overlap_ratio)
 
         resampled_windows = []
         labels = []
