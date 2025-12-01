@@ -52,7 +52,7 @@ def hyperparemeter_tuning(features, embeddings, labels, k_values=[1], n_splits=1
     metrics = {(method, type, scenario): [] for method in ['mixed', 'participant'] for type in ['features', 'embeddings'] for scenario in ['a', 'b', 'c']}
 
     # For each splitting method
-    for method in ['mixed', 'participant']:
+    for method in ['participant']:
 
         splits = [mixed_splitting(features, embeddings, labels) for _ in range(n_splits)] if method == 'mixed' else [participant_splitting(features, embeddings, labels) for _ in range(n_splits)]
 
@@ -61,14 +61,13 @@ def hyperparemeter_tuning(features, embeddings, labels, k_values=[1], n_splits=1
         for pipeline in pipelines:
             train_dataset = pipeline["train"]
             augmented_train_dataset = augment_train_dataset(train_dataset)
-            analyze_activity_balance(augmented_train_dataset["labels"])
             pipeline["train"] = augmented_train_dataset
 
         # For each data type
         for type in ['features', 'embeddings']:
 
             # For each scenario
-            for scenario in ['a', 'b', 'c']:
+            for scenario in ['c', 'b', 'c']:
 
                 # For n_splits or number of splits
                 for i in range(n_splits):

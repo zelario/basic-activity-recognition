@@ -65,7 +65,7 @@ def sklearn_knn_classifier(train_dataset, train_labels, k=3):
     predict : function
         Function that takes a validate dataset and returns predictions."""
     
-    model = KNeighborsClassifier(n_neighbors=k)
+    model = KNeighborsClassifier(n_neighbors=k, weights='distance', metric='manhattan')
     model.fit(train_dataset, train_labels[:, 0])
 
     return model
