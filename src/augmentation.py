@@ -127,9 +127,8 @@ def augment_activity_data(features, labels, activity=4, participant=3, n_samples
 
 	return synthetic_features
 
-def augment_dataset(features, labels):
-	"""
-	Augment features using SMOTE to balance activity classes.
+def augment_dataset(dataset, labels):
+	"""Augment features using SMOTE to balance activity classes.
 
 	Parameters
 	----------
@@ -143,15 +142,15 @@ def augment_dataset(features, labels):
 	augmented_features : np.ndarray
 		Augmented feature matrix after SMOTE.
 	augmented_labels : np.ndarray
-		Corresponding labels for augmented samples.
-	"""
+		Corresponding labels for augmented samples."""
+	
 	# Ensure arrays have the same number of samples
-	n_samples = min(features.shape[0], labels.shape[0])
-	features = features[:n_samples]
+	n_samples = min(dataset.shape[0], labels.shape[0])
+	dataset = dataset[:n_samples]
 	labels = labels[:n_samples]
 
 	smote = SMOTE()
-	augmented_features, augmented_activity_labels = smote.fit_resample(features, labels[:, 0])
+	augmented_dataset, augmented_activity_labels = smote.fit_resample(dataset, labels[:, 0])
 
 	# Reconstruct labels with random participant and device ids for synthetic samples
 	synthetic_count = augmented_activity_labels.shape[0] - labels.shape[0]
@@ -161,7 +160,36 @@ def augment_dataset(features, labels):
 	augmented_participant_ids = np.vstack((original_participant_ids, synthetic_participant_ids))
 	augmented_labels = np.hstack((augmented_activity_labels.reshape(-1, 1), augmented_participant_ids))
 
-	return augmented_features, augmented_labels
+	return augmented_dataset, augmented_labels
+
+def augment_train_dataset(train_dataset):
+	"""Augment each features and embeddings array in a train pipeline dict using SMOTE.
+
+	Parameters
+	----------
+	train : dict
+		Dictionary with keys 'features', 'embeddings', and 'labels'.
+
+	Returns
+	-------
+	dict
+		Updated train dict with augmented arrays."""
+
+	augmented_train_dataset = {"features": {}, "embeddings": {}, "labels": None}
+	labels = train_dataset["labels"]
+
+	# Augment features
+	for key, matrix in train_dataset["features"].items():
+		augmented_matrix, augmented_labels = augment_dataset(matrix, labels)
+		augmented_train_dataset["features"][key] = augmented_matrix
+		augmented_train_dataset["labels"] = augmented_labels  
+
+	# Augment embeddings
+	for key, matrix in train_dataset["embeddings"].items():
+		augmented_matrix, _ = augment_dataset(matrix, labels)
+		augmented_train_dataset["embeddings"][key] = augmented_matrix
+
+	return augmented_train_dataset
 
 # --- Exercise 1.3: Visualize Synthetic vs Real Samples ---
 

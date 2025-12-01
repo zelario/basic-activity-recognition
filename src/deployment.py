@@ -3,8 +3,8 @@ from features import *
 from outliers import *
 from embeddings import *
 from models import *
-from augmentation import *
 import numpy as np
+from augmentation import augment_dataset
 
 def get_random_sample(dataset):
 
@@ -83,5 +83,3 @@ def my_model(sample_dataset):
     predicted_labels = knn_model.predict(sample_features_relief)
 
     print_and_log(f"Predicted label for the sample dataset: {predicted_labels}")
-
-    pass

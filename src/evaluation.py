@@ -17,6 +17,7 @@ import numpy as np
 from scipy.stats import ttest_rel, ttest_ind
 import matplotlib.pyplot as plt
 import seaborn as sns
+from augmentation import *
 
 MODEL_NAMES = [
     'Mixed-Features-A', 'Mixed-Embeddings-A',
@@ -56,6 +57,12 @@ def hyperparemeter_tuning(features, embeddings, labels, k_values=[1], n_splits=1
         splits = [mixed_splitting(features, embeddings, labels) for _ in range(n_splits)] if method == 'mixed' else [participant_splitting(features, embeddings, labels) for _ in range(n_splits)]
 
         pipelines = [prepare_pipeline(split) for split in splits]
+
+        for pipeline in pipelines:
+            train_dataset = pipeline["train"]
+            augmented_train_dataset = augment_train_dataset(train_dataset)
+            analyze_activity_balance(augmented_train_dataset["labels"])
+            pipeline["train"] = augmented_train_dataset
 
         # For each data type
         for type in ['features', 'embeddings']:
