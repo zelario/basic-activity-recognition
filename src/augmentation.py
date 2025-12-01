@@ -41,14 +41,16 @@ def discard_activities(features=None, pca=None, labels=None, embeddings=None):
 	tuple
 		Filtered arrays containing only rows for which activity <= 7."""
 	
+	valid_activities = [1, 2, 4, 6]
+	
 	if features is not None and labels is not None:
-		mask = labels[:, 0] <= 7
+		mask = np.isin(labels[:, 0], valid_activities)
 		return features[mask], labels[mask]
 	if embeddings is not None and labels is not None:
-		mask = labels[:, 0] <= 7
+		mask = np.isin(labels[:, 0], valid_activities)
 		return embeddings[mask], labels[mask]
 	if pca is not None and labels is not None:
-		mask = labels[:, 0] <= 7
+		mask = np.isin(labels[:, 0], valid_activities)
 		return pca[mask], labels[mask]
 
 # --- Exercise 1.1: Data Augmentation with SMOTE ---
