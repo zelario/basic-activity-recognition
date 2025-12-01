@@ -60,8 +60,11 @@ def hyperparemeter_tuning(features, embeddings, labels, k_values=[1], n_splits=1
 
         for pipeline in pipelines:
             train_dataset = pipeline["train"]
+            combined_dataset = pipeline["combined"]
             augmented_train_dataset = augment_train_dataset(train_dataset)
+            augmented_combined_dataset = augment_train_dataset(combined_dataset)
             pipeline["train"] = augmented_train_dataset
+            pipeline["combined"] = augmented_combined_dataset
 
         # For each data type
         for type in ['features', 'embeddings']:
