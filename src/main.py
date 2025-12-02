@@ -1,3 +1,9 @@
+"""
+Main Activity.
+
+File used to run all exercises in Part A and Part B.
+"""
+
 from evaluation import *
 from log import *
 from load import *
@@ -10,7 +16,7 @@ from models import *
 from evaluation import *
 from deployment import *
 
-def partA ():
+def moduleA ():
 
     '''# --- Exercise 1: Load Part Dataset ---
 
@@ -50,7 +56,7 @@ def partA ():
 
     # --- Exercise 4.2: Feature Extraction ---
 
-    dataset, variables_modules = remove_outliers(dataset, variables_modules)
+    dataset = remove_outliers(dataset, variables_modules)
     
     features, labels = extract_features(dataset, window_duration=5.0, overlap_ratio=0.5)
     features = zscore_normalization(features)
@@ -72,7 +78,7 @@ def partA ():
 
     save_data(dataset, features, labels)
 
-def partB ():
+def moduleB ():
 
     # --- Pre game dataset loading and preprocessing ---
 
@@ -139,10 +145,10 @@ if __name__ == "__main__":
 
     #--- Run Part A Exercises ---
 
-    '''partA()'''
+    '''moduleA()'''
 
     #--- Run Part B Exercises ---
 
-    partB()
+    moduleB()
 
     print_and_log(f"\n============================= END AT {datetime.now().strftime("%Y-%m-%d %H:%M:%S")} =============================\n")

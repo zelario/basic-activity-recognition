@@ -23,8 +23,7 @@ def load_model():
   return feature_encoder
 
 def resample_to_30hz_5s(acc_xyz, fs_in_hz):
-    """
-    Resample raw accelerometer data to 30 Hz over a 5-second window.
+    """Resample raw accelerometer data to 30 Hz over a 5-second window.
 
     Parameters
     ----------
@@ -38,8 +37,8 @@ def resample_to_30hz_5s(acc_xyz, fs_in_hz):
     acc_resampled : np.ndarray, shape (M, 3)
         Resampled accelerometer data at 30 Hz for a 5-second window.
     fs_target : float
-        Target sampling frequency (30.0 Hz).
-    """
+        Target sampling frequency (30.0 Hz)."""
+    
     fs_target = 30.0
     win_size = 5 # in seconds
     t_in = np.arange(acc_xyz.shape[0]) / fs_in_hz
@@ -56,8 +55,7 @@ def resample_to_30hz_5s(acc_xyz, fs_in_hz):
 # --- Exercise 2.1: Embeddings Computing ---
 
 def compute_embeddings(dataset, fs=51.5, window_duration=5.0, overlap_ratio=0.5):
-    """
-    Compute embeddings for the entire dataset using a sliding window approach.
+    """Compute embeddings for the entire dataset using a sliding window approach.
     Ensures window alignment with traditional feature extraction for direct comparison.
 
     Parameters
@@ -78,8 +76,7 @@ def compute_embeddings(dataset, fs=51.5, window_duration=5.0, overlap_ratio=0.5)
     embeddings : np.ndarray, shape (n_windows, n_embeddings)
         Computed embeddings for each valid window.
     labels : np.ndarray, shape (n_windows, 2)
-        Labels for each window: [activity, participant].
-    """
+        Labels for each window: [activity, participant]."""
     
     try:
         embeddings = np.load("npy/embeddings.npy", allow_pickle=True)

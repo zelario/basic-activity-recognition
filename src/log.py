@@ -7,8 +7,8 @@ def print_and_log(*args, path="log/output.log", sep=" ", end="\n"):
         *args: Values to print.
         log_file_path: Path to the log file (default: "../log/output.log").
         sep: Separator between values (default: space).
-        end: End character (default: newline).
-    """
+        end: End character (default: newline)."""
+    
     message = sep.join(str(arg) for arg in args) + end
     print(message, end="")
     with open(path, "a", encoding="utf-8") as f:
@@ -21,8 +21,8 @@ def clear_and_print(*args, sep=" ", end="\n"):
         *args: Values to print.
         log_file_path: Path to the log file (default: "../log/output.log").
         sep: Separator between values (default: space).
-        end: End character (default: newline).
-    """
+        end: End character (default: newline)."""
+    
     message = sep.join(str(arg) for arg in args) + end
     print(message, end="")
     with open("log/output.log", "w", encoding="utf-8") as f:

@@ -1,8 +1,6 @@
 from sklearn.model_selection import train_test_split
 import numpy as np
-from features import relief
-from features import compute_pca
-from features import zscore_normalization
+from features import *
 
 # --- Exercise 3.1: Mixed participant splitting ---
 

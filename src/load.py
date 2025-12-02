@@ -12,9 +12,9 @@ Column conventions expected in loaded arrays:
 - Last column 13: participant number (added during part loading)
 """
 
-from log import print_and_log
-from features import extract_features
-from outliers import compute_modules, remove_outliers
+from log import *
+from features import *
+from outliers import *
 import numpy as np
 import csv
 
@@ -99,7 +99,7 @@ def reload_data():
 	except FileNotFoundError:
 		dataset = load_data()
 		variables_modules = compute_modules(dataset)
-		dataset, variables_modules = remove_outliers(dataset, variables_modules)
+		dataset = remove_outliers(dataset, variables_modules)
 
 		features, labels = extract_features(dataset, window_duration=5.0, overlap=0.5)
 

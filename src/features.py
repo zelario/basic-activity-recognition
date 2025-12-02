@@ -163,8 +163,7 @@ def compute_features(signal):
     Returns
     -------
     feature_values : list of float
-        List of 12 features extracted from signal.
-    """
+        List of 12 features extracted from signal."""
 
     mean_value = np.mean(signal)
 
@@ -227,7 +226,7 @@ def extract_features(dataset, window_duration=5.0, overlap=0.5):
     labels = []
 
     # For each window, extract features for each axis
-    for (start_idx, end_idx, activity_label, participant, device) in windows:
+    for (start_idx, end_idx, activity, participant, device) in windows:
         window_data = dataset[start_idx:end_idx]
 
         # Acceleration x, y, z
@@ -265,7 +264,7 @@ def extract_features(dataset, window_duration=5.0, overlap=0.5):
 
         # Append labels and features
         participant = int(dataset[start_idx, 12])
-        labels.append((activity_label, participant, device))
+        labels.append((activity, participant, device))
         features.append(combined_features)
 
     features = np.array(features)
@@ -351,10 +350,8 @@ def analyse_pca(explained_variance_ratio):
 
     # Plot explained variance and cumulative variance
     plt.figure(figsize=(8, 5))
-    plt.bar(range(1, len(explained_variance_ratio) + 1), explained_variance_ratio,
-            alpha=0.6, label="Explained Variance Ratio")
-    plt.plot(range(1, len(cumulative) + 1), cumulative,
-             color='red', marker='o', label="Cumulative Variance")
+    plt.bar(range(1, len(explained_variance_ratio) + 1), explained_variance_ratio, alpha=0.6, label="Explained Variance Ratio")
+    plt.plot(range(1, len(cumulative) + 1), cumulative, color='red', marker='o', label="Cumulative Variance")
 
     plt.axhline(y=0.75, color='green', linestyle='--', label=f"{int(0.75*100)}% Variance")
 
@@ -385,22 +382,24 @@ def fisher(features, labels):
     labels = np.array(labels)
     n_features = features.shape[1]
     activity_labels = labels[:, 0]
-    classes = np.unique(activity_labels)
+    activity_ids = np.unique(activity_labels)
     overall_mean = np.nanmean(features, axis=0)
 
     nominator = np.zeros(n_features)
     denominator = np.zeros(n_features)
 
-    # For each class, compute contributions to nominator and denominator
-    for class_ in classes:
-        class_mask = activity_labels == class_
-        class_data = features[class_mask]
-        class_count = np.sum(~np.isnan(class_data), axis=0)
-        class_mean = np.nanmean(class_data, axis=0)
+    # For each activity, compute contributions to nominator and denominator
+    for activity in activity_ids:
 
-        diff = np.where(np.isnan(class_mean - overall_mean), 0, class_mean - overall_mean)
-        nominator += class_count * (diff ** 2)
-        denominator += np.nansum((class_data - class_mean) ** 2, axis=0)
+        activity_mask = activity_labels == activity
+        activity_data = features[activity_mask]
+        activity_count = np.sum(~np.isnan(activity_data), axis=0)
+        activity_mean = np.nanmean(activity_data, axis=0)
+
+        diff = np.where(np.isnan(activity_mean - overall_mean), 0, activity_mean - overall_mean)
+        nominator += activity_count * (diff ** 2)
+        denominator += np.nansum((activity_data - activity_mean) ** 2, axis=0)
+
     with np.errstate(divide='ignore', invalid='ignore'):
         scores = np.where(denominator > 0, nominator / denominator, 0)
 
@@ -437,14 +436,14 @@ def relief(dataset, labels, n_samples=500, top_n=10, print_output=True):
     n_total = dataset.shape[0]
     n_features = dataset.shape[1]
     sample_indices = np.random.choice(n_total, min(n_samples, n_total), replace=False)
-    features_sample = dataset[sample_indices]
-    labels_sample = labels[sample_indices, 0]
+    sample_features = dataset[sample_indices]
+    sample_labels = labels[sample_indices, 0]
 
     nominator = np.zeros(n_features)
 
-    for i, instance in enumerate(features_sample):
-        same_mask = labels_sample == labels_sample[i]
-        diff_mask = labels_sample != labels_sample[i]
+    for i, instance in enumerate(sample_features):
+        same_mask = sample_labels == sample_labels[i]
+        diff_mask = sample_labels != sample_labels[i]
 
         # Exclude the instance itself for hit
         same_indices = np.where(same_mask)[0]
@@ -452,24 +451,24 @@ def relief(dataset, labels, n_samples=500, top_n=10, print_output=True):
         diff_indices = np.where(diff_mask)[0]
 
         if same_indices.size > 0:
-            hit_idx = same_indices[np.argmin(np.linalg.norm(features_sample[same_indices] - instance, axis=1))]
-            hit_diff = np.abs(features_sample[hit_idx] - instance)
+            hit_idx = same_indices[np.argmin(np.linalg.norm(sample_features[same_indices] - instance, axis=1))]
+            hit_diff = np.abs(sample_features[hit_idx] - instance)
         else:
             hit_diff = np.zeros(n_features)
 
         if diff_indices.size > 0:
-            miss_idx = diff_indices[np.argmin(np.linalg.norm(features_sample[diff_indices] - instance, axis=1))]
-            miss_diff = np.abs(features_sample[miss_idx] - instance)
+            miss_idx = diff_indices[np.argmin(np.linalg.norm(sample_features[diff_indices] - instance, axis=1))]
+            miss_diff = np.abs(sample_features[miss_idx] - instance)
         else:
             miss_diff = np.zeros(n_features)
 
         nominator += miss_diff - hit_diff
 
     scores = nominator / n_samples
-    sorted_idx = np.argsort(scores)[::-1]
-    sorted_scores = scores[sorted_idx]
+    sorted_indexes = np.argsort(scores)[::-1]
+    sorted_scores = scores[sorted_indexes]
 
-    top_indices = sorted_idx[:top_n]
+    top_indices = sorted_indexes[:top_n]
 
     if print_output:
         print_and_log("\n========== Relief ==========")

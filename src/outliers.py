@@ -17,9 +17,8 @@ Column conventions expected in `dataset` matrix:
 - Column 12: participant id
 """
 
-from log import print_and_log
+from log import *
 import numpy as np
-import matplotlib as mpl
 import matplotlib.pyplot as plt
 from sklearn.cluster import KMeans, DBSCAN
 
@@ -87,17 +86,17 @@ def boxplot_modules(dataset, variables_modules):
 
     # Plot boxplots for each variable modules
     for name, modules in zip(VARIABLE_NAMES, variables_modules):
-        activities_col = dataset[:, 11]
-        devices_col = dataset[:, 0]
+        activities = dataset[:, 11]
+        devices = dataset[:, 0]
         activities_number = np.arange(1, 17)
         box_data = []
         positions = []
 
-        for act in activities_number:
-            vals = modules[(activities_col == act) & (devices_col == device_choice)]
-            if vals.size > 0:
-                box_data.append(vals)
-                positions.append(act)
+        for activity in activities_number:
+            values = modules[(activities == activity) & (devices == device_choice)]
+            if values.size > 0:
+                box_data.append(values)
+                positions.append(activity)
         plt.figure(figsize=(10, 6))
 
         if box_data:
@@ -121,8 +120,7 @@ def outlier_density_iqr(dataset, variables_modules):
     dataset : matrix, shape (n_samples, 13)
         Raw dataset matrix.
     variables_modules : matrix, shape (3, n_samples)
-        Matrix where each row corresponds to the module of Acc, Gyro, Mag vectors.
-    """
+        Matrix where each row corresponds to the module of Acc, Gyro, Mag vectors."""
     
     # For each varible
     for variable_name, variable_modules in zip(VARIABLE_NAMES, variables_modules):
@@ -134,19 +132,19 @@ def outlier_density_iqr(dataset, variables_modules):
         densities = np.zeros(16)
 
         # For each activity, compute outlier density
-        for idx, act in enumerate(activities_number):
-            activity_mask = activities == act
-            act_modules = variable_modules_right[activity_mask]
-            q1, q3 = np.percentile(act_modules, [25, 75])
+        for index, activity in enumerate(activities_number):
+            activity_mask = activities == activity
+            activity_modules = variable_modules_right[activity_mask]
+            q1, q3 = np.percentile(activity_modules, [25, 75])
             iqr = q3 - q1
             lower = q1 - 1.5 * iqr
             upper = q3 + 1.5 * iqr
-            outliers = np.logical_or(act_modules < lower, act_modules > upper)
+            outliers = np.logical_or(activity_modules < lower, activity_modules > upper)
             density = np.mean(outliers) * 100
-            densities[idx] = density
-            print_and_log(f"Activity {act}: {density:.2f}% ({np.sum(outliers)}/{act_modules.size})")
+            densities[index] = density
+            print_and_log(f"Activity {activity}: {density:.2f}% ({np.sum(outliers)}/{activity_modules.size})")
 
-def remove_outliers(dataset, variables_modules, k=3):
+def remove_outliers(dataset, variables_modules):
     """Remove z-score outliers from the dataset for all variable modules.
 
     Parameters
@@ -155,8 +153,6 @@ def remove_outliers(dataset, variables_modules, k=3):
         Raw dataset matrix.
     variables_modules : matrix, shape (3, n_samples)
         Matrix where each row corresponds to the module of Acc, Gyro, Mag vectors.
-    k : float, optional
-        Z-score threshold for outlier detection.
 
     Returns
     -------
@@ -169,20 +165,20 @@ def remove_outliers(dataset, variables_modules, k=3):
     for variable_modules in variables_modules:
         for activity in range(1, 17):
             activity_mask = dataset[:, 11] == activity
-            activity_idxs = np.where(activity_mask)[0]
+            activity_indexes = np.where(activity_mask)[0]
             activity_data = variable_modules[activity_mask]
             q1, q3 = np.percentile(activity_data, [25, 75])
             iqr = q3 - q1
             lower = q1 - 1.5 * iqr
             upper = q3 + 1.5 * iqr
             outlier_idxs = np.where((activity_data < lower) | (activity_data > upper))[0]
-            full_outlier_idxs = activity_idxs[outlier_idxs]
-            outlier_mask[full_outlier_idxs] = True
+            full_outlier_indexes = activity_indexes[outlier_idxs]
+            outlier_mask[full_outlier_indexes] = True
 
-    # Remove outliers from dataset and all variable modules
+    # Remove outliers from dataset
     cleaned_dataset = dataset[~outlier_mask]
-    cleaned_modules = [variable_modules[~outlier_mask] for variable_modules in variables_modules]
-    return cleaned_dataset, cleaned_modules
+
+    return cleaned_dataset
 
 # --- Exercise 3.3 and 3.4: Outlier Detection via Z-Score ---
 
@@ -210,23 +206,24 @@ def outlier_density_z_score(dataset, variables_modules, k=3):
         # For each activity, compute outlier density
         for activity in range(1, 17):
             activity_mask = activities == activity
-            act_vals = variable_modules_right[activity_mask]
-            n = act_vals.size
+            activity_modules = variable_modules_right[activity_mask]
+            n = activity_modules.size
 
             if n == 0:
                 print_and_log(f"Activity {activity}: 0.00% (0/0)")
                 continue
-            std = np.std(act_vals)
+            std = np.std(activity_modules)
 
             if std == 0 or not np.isfinite(std):
                 density = 0.0
                 outlier_count = 0
 
             else:
-                z_scores = (act_vals - np.mean(act_vals)) / std
+                z_scores = (activity_modules - np.mean(activity_modules)) / std
                 outlier_mask = np.abs(z_scores) > k
                 outlier_count = int(outlier_mask.sum())
                 density = float(outlier_mask.mean() * 100.0)
+
             print_and_log(f"Activity {activity}: {density:.2f}% ({outlier_count}/{n})")
 
 def plot_zscore_outliers(dataset, variables_modules, k=3):
@@ -242,27 +239,27 @@ def plot_zscore_outliers(dataset, variables_modules, k=3):
         Z-score threshold for outlier detection. Default is 3."""
     
     print_and_log("\n--- Z-Score Outlier Visualization ---\n")
-    activity_id = int(input("Pick an activity to highlight outliers (1-16): "))
+    activity = int(input("Pick an activity to highlight outliers (1-16): "))
 
     # For each variable module, plot outliers for the selected activity
     for variable_name, variable_modules in zip(VARIABLE_NAMES, variables_modules):
 
         # Compute z-scores and identify outliers
-        activity_mask = dataset[:, 11] == activity_id
+        activity_mask = dataset[:, 11] == activity
         activity_data = variable_modules[activity_mask]
         mean = np.mean(activity_data)
         std = np.std(activity_data)
         z_scores = (activity_data - mean) / std
-        outlier_idxs = np.where(np.abs(z_scores) > k)[0]
+        outlier_indexes = np.where(np.abs(z_scores) > k)[0]
 
         # Plot normal samples and outliers
-        activity_mask = dataset[:, 11] == activity_id
+        activity_mask = dataset[:, 11] == activity
         activity_data = variable_modules[activity_mask]
-        idxs = np.arange(activity_data.size)
+        activity_indexes = np.arange(activity_data.size)
         plt.figure(figsize=(10, 4))
-        plt.scatter(idxs, activity_data, color='blue', label='Normal')
-        plt.scatter(idxs[outlier_idxs], activity_data[outlier_idxs], color='red', label='Outlier')
-        plt.title(f"Normal and outlier samples - {variable_name} - Activity {activity_id}")
+        plt.scatter(activity_indexes, activity_data, color='blue', label='Normal')
+        plt.scatter(activity_indexes[outlier_indexes], activity_data[outlier_indexes], color='red', label='Outlier')
+        plt.title(f"Normal and outlier samples - {variable_name} - Activity {activity}")
         plt.xlabel("Sample Index")
         plt.ylabel("Variable")
         plt.legend()
@@ -324,22 +321,22 @@ def plot_kmeans_clusters(dataset, variables_modules, n_clusters=3):
     combined_mask = device_mask & activity_mask
 
     # Filter data for selected activity/device
-    activity_idxs = np.where(combined_mask)[0]
-    filtered_data_3d = np.column_stack([acc_modules, gyro_modules, mag_modules])[activity_idxs]
+    activity_indexes = np.where(combined_mask)[0]
+    filtered_data_3d = np.column_stack([acc_modules, gyro_modules, mag_modules])[activity_indexes]
     outlier_mask = np.zeros(len(filtered_data_3d), dtype=bool)
 
     # For each variable
     for i in range(3):
 
         # Calculate IQR and identify outliers for each variable
-        var_data = filtered_data_3d[:, i]
-        if var_data.size == 0:
+        variable_data = filtered_data_3d[:, i]
+        if variable_data.size == 0:
             continue
-        q1, q3 = np.percentile(var_data, [25, 75])
+        q1, q3 = np.percentile(variable_data, [25, 75])
         iqr = q3 - q1
         lower = q1 - 1.5 * iqr
         upper = q3 + 1.5 * iqr
-        outlier_mask |= (var_data < lower) | (var_data > upper)
+        outlier_mask |= (variable_data < lower) | (variable_data > upper)
 
     # Fit KMeans and plot clusters
     kmeans = KMeans(n_clusters=n_clusters, random_state=42)

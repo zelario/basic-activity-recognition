@@ -203,7 +203,6 @@ def paired_hypothesis_test(method, metrics=None, chosen_metric='accuracy'):
     plt.suptitle(f'{method.capitalize()} Model Comparisons (All Pairs)', y=0.995)
     plt.show()
 
-
 def independent_hypothesis_test(metrics=None, chosen_metric='accuracy'):
     """Perform independent hypothesis tests and KDE visualizations comparing mixed vs participant versions of each model.
     For each scenario and type, performs an independent t-test and plots the distribution of the chosen metric for mixed and participant models.

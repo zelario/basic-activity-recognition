@@ -56,8 +56,7 @@ def discard_activities(features=None, pca=None, labels=None, embeddings=None):
 # --- Exercise 1.1: Data Augmentation with SMOTE ---
 
 def analyze_activity_balance(labels):
-	"""
-	Analyze the balance of activity samples in the dataset and print sample counts per activity.
+	"""Analyze the balance of activity samples in the dataset and print sample counts per activity.
 
 	Parameters
 	----------
@@ -67,8 +66,7 @@ def analyze_activity_balance(labels):
 	Returns
 	-------
 	None
-		Prints activity sample counts to stdout.
-	"""
+		Prints activity sample counts to stdout."""
 
 	# Count samples per activity
 	activities = labels[:, 0]
@@ -81,8 +79,7 @@ def analyze_activity_balance(labels):
 # --- Exercise 1.2: Data Augmentation with SMOTE ---
 
 def augment_activity_data(features, labels, activity=4, participant=3, n_samples=3):
-	"""
-	Generate synthetic samples for a specific activity using SMOTE-like interpolation.
+	"""Generate synthetic samples for a specific activity using SMOTE-like interpolation.
 
 	Parameters
 	----------
@@ -100,8 +97,7 @@ def augment_activity_data(features, labels, activity=4, participant=3, n_samples
 	Returns
 	-------
 	synthetic_features : np.ndarray
-		Generated synthetic feature matrix (n_samples, n_features).
-	"""
+		Generated synthetic feature matrix (n_samples, n_features)."""
 	
 	# Filter samples for the target activity
 	mask = labels[:, 0] == activity
