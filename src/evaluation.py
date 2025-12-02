@@ -52,7 +52,7 @@ def hyperparemeter_tuning(features, embeddings, labels, k_values=[1], n_splits=1
     metrics = {(method, type, scenario): [] for method in ['mixed', 'participant'] for type in ['features', 'embeddings'] for scenario in ['a', 'b', 'c']}
 
     # For each splitting method
-    for method in ['mixed','participant']:
+    for method in ['participant','mixed']:
 
         splits = [mixed_splitting(features, embeddings, labels) for _ in range(n_splits)] if method == 'mixed' else [participant_splitting(features, embeddings, labels) for _ in range(n_splits)]
 

@@ -18,9 +18,9 @@ from deployment import *
 
 def moduleA ():
 
-    '''# --- Exercise 1: Load Part Dataset ---
+    # --- Exercise 1: Load Part Dataset ---
 
-    part_dataset = load_part_data(0)'''
+    part_dataset = load_part_data(0)
 
     # --- Exercise 2: Load Full Dataset ---
 
@@ -30,7 +30,7 @@ def moduleA ():
 
     variables_modules = compute_modules(dataset) 
 
-    '''boxplot_modules(dataset, variables_modules)
+    boxplot_modules(dataset, variables_modules)
 
     # --- Exercise 3.2: Outlier Densities via IQR ---
 
@@ -52,16 +52,16 @@ def moduleA ():
     # --- Exercise 4.1: Statistical Tests ---
 
     alpha = 0.05
-    normality_and_significance(dataset, variables_modules, alpha)'''
+    normality_and_significance(dataset, variables_modules, alpha)
 
     # --- Exercise 4.2: Feature Extraction ---
 
     dataset = remove_outliers(dataset, variables_modules)
     
-    features, labels = extract_features(dataset, window_duration=5.0, overlap_ratio=0.5)
+    features, labels = extract_features(dataset, window_duration=5.0, overlap=0.5)
     features = zscore_normalization(features)
 
-    '''# --- Exercise 4.3: PCA ---
+    # --- Exercise 4.3: PCA ---
 
     pca, explained_variance_ratio, _ = compute_pca(features)
 
@@ -72,7 +72,7 @@ def moduleA ():
     # --- Exercise 4.5: Fisher and ReliefF ---
 
     fisher(features, labels)
-    relief(features, labels, n_neighbors=100)'''
+    relief(features, labels)
 
     # --- Save Data ---
 
@@ -126,18 +126,19 @@ def moduleB ():
 
     hyperparemeter_tuning(features, embeddings, labels, k_values=[1, 3, 5, 7, 9, 11, 17, 19], n_splits=10)
 
-    # --- Exercise 5.2: Hypothesis Testing ---
+    '''# --- Exercise 5.2: Hypothesis Testing ---
 
     paired_hypothesis_test("mixed", chosen_metric="f1_score")
     paired_hypothesis_test("participant", chosen_metric="f1_score")
 
-    independent_hypothesis_test(chosen_metric="f1_score")
+    independent_hypothesis_test(chosen_metric="f1_score")'''
 
     # --- Exercise 6: Deployment ---
 
-    sample_dataset = get_random_sample(dataset)
+    model = deployment_model(features, labels, k=19)
 
-    my_model(sample_dataset)
+    sample = get_random_sample(dataset)
+    classify_sample(model, sample)
 
 if __name__ == "__main__":
 

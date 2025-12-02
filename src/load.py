@@ -79,32 +79,32 @@ def save_data(dataset, features, labels):
     np.save("npy/feature_labels.npy", labels)
     
 def reload_data():
-	"""Load or recompute cached feature artifacts from the `data/` folder.
-	Loads precomputed numpy arrays if available; otherwise, recomputes features from raw data and saves them.
+    """Load or recompute cached feature artifacts from the `data/` folder.
+    Loads precomputed numpy arrays if available; otherwise, recomputes features from raw data and saves them.
 
-	Returns
-	-------
-	data : np.ndarray
-		Raw dataset matrix.
-	features : np.ndarray, shape (n_windows, n_features)
-		Feature matrix.
-	labels : np.ndarray, shape (n_windows, 2)
-		Integer array: column 0 is activity, column 1 is participant ID."""
-	
-	try:
-		dataset = np.load("npy/dataset.npy", allow_pickle=True)
-		features = np.load("npy/features.npy", allow_pickle=True)
-		labels = np.load("npy/feature_labels.npy", allow_pickle=True)
+    Returns
+    -------
+    data : np.ndarray
+        Raw dataset matrix.
+    features : np.ndarray, shape (n_windows, n_features)
+        Feature matrix.
+    labels : np.ndarray, shape (n_windows, 2)
+        Integer array: column 0 is activity, column 1 is participant ID."""
+    
+    try:
+        dataset = np.load("npy/dataset.npy", allow_pickle=True)
+        features = np.load("npy/features.npy", allow_pickle=True)
+        labels = np.load("npy/feature_labels.npy", allow_pickle=True)
+    except FileNotFoundError:
+        dataset = load_data()
+        variables_modules = compute_modules(dataset)
+        dataset_copy = dataset.copy()
+        dataset_copy = remove_outliers(dataset_copy, variables_modules)
 
-	except FileNotFoundError:
-		dataset = load_data()
-		variables_modules = compute_modules(dataset)
-		dataset = remove_outliers(dataset, variables_modules)
+        features, labels = extract_features(dataset, window_duration=5.0, overlap=0.5)
 
-		features, labels = extract_features(dataset, window_duration=5.0, overlap=0.5)
+        np.save("npy/dataset.npy", dataset)
+        np.save("npy/features.npy", features)
+        np.save("npy/feature_labels.npy", labels)
 
-		np.save("npy/dataset.npy", dataset)
-		np.save("npy/features.npy", features)
-		np.save("npy/feature_labels.npy", labels)
-
-	return dataset, features, labels
+    return dataset, features, labels

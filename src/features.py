@@ -92,7 +92,7 @@ def normality_and_significance(dataset, variables_modules, alpha=0.05):
         else:
             print_and_log("Result: No significant differences between activities")
 
-def sliding_windows(dataset, window_duration=5.0, overlap=0.5):
+def sliding_windows(dataset, window_duration, overlap):
     """Create windows, enforcing label/device/participant continuity.
 
     Parameters

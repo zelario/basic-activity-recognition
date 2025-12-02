@@ -84,7 +84,31 @@ def _format_sample(sample_dataset):
     formated_sample[:, 12] = 1  # participant id
     return formated_sample
 
-def my_model(sample_dataset):
+def deployment_model(dataset, labels, k=19):
+    """Train and return a knn model for deployment using scikit-learn's KNeighborsClassifier.
+
+    Parameters
+    ----------
+    train_dataset : matrix"""
+
+    dataset, means, stds = zscore_normalization(dataset, return_parameters=True)
+
+    # Compute PCA on the dataset
+    pca, explained_variances, pca_object = compute_pca(dataset)
+
+    # Determine number of components to retain 90% variance
+    cumulative = np.cumsum(explained_variances)
+    n_components = np.argmax(cumulative >= 0.9) + 1
+
+    pca = pca[:, :n_components]
+
+    knn_model = sklearn_knn_classifier(pca, labels, k=k)
+
+    model = (knn_model, means, stds, pca_object, n_components)
+
+    return model
+
+def classify_sample(model, sample):
     """Deploy the trained model to make predictions on a sample dataset.
 
     This function loads the trained model features and labels, applies activity filtering and augmentation,
@@ -97,33 +121,24 @@ def my_model(sample_dataset):
         Array of shape (256, 9) with sensor data to classify.
     """
 
-    print_and_log("\n--- Making predictions on sample dataset ---\n")
+    knn_model, means, stds, pca_object, n_components = model
 
-    try:
-        model_features = np.load("npy/features.npy", allow_pickle=True)
-        model_labels = np.load("npy/feature_labels.npy", allow_pickle=True)
-        model_features, model_labels = discard_activities(features=model_features, labels=model_labels)
-        model_features, model_labels = augment_dataset(model_features, model_labels)
-    except FileNotFoundError:
-        return
+    print_and_log("\n--- Making predictions on sample dataset ---\n")
     
     # Format sample dataset to match every other function
-    sample_dataset = _format_sample(sample_dataset)
+    sample = _format_sample(sample)
 
     # Extract features from sample 
-    sample_variables_modules = compute_modules(sample_dataset)
-    sample_features, _ = extract_features(sample_dataset, sample_variables_modules, overlap=0.0)
+    sample_features, _ = extract_features(sample, window_duration=5.0, overlap=0.0)
     
-    # Select top 15 features using Relief for both model and sample features
-    normalized_model_features, model_features_mean, model_features_std = zscore_normalization(model_features, return_parameters=True)
-    top_15_model_features_indices = relief(normalized_model_features, model_labels, top_n=15, print_output=False)
-    model_features_relief = normalized_model_features[:, top_15_model_features_indices]
+    # Normalize sample
+    sample_features = zscore_normalization(sample_features, mean_values=means, std_values=stds)
 
-    normalized_sample_features = zscore_normalization(sample_features, mean_values=model_features_mean, std_values=model_features_std)
-    sample_features_relief = normalized_sample_features[:, top_15_model_features_indices]
-    
-    # Make prediction using knn with k=19
-    knn_model = sklearn_knn_classifier(model_features_relief, model_labels, k=19)
-    predicted_labels = knn_model.predict(sample_features_relief)
+    # Apply PCA to sample
+    sample_pca = compute_pca(sample_features, pca_object=pca_object)
+    sample_pca = sample_pca[:, :n_components]
 
-    print_and_log(f"Predicted label for the sample dataset: {predicted_labels}")
+    # Predict label using k-NN
+    predicted_label = knn_model.predict(sample_pca)
+
+    print_and_log(f"Predicted label for the sample dataset: {predicted_label}")

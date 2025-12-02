@@ -41,7 +41,7 @@ def discard_activities(features=None, pca=None, labels=None, embeddings=None):
 	tuple
 		Filtered arrays containing only rows for which activity <= 7."""
 	
-	valid_activities = [1, 2, 4, 6]
+	valid_activities = [1, 2, 3, 4, 5, 6, 7]
 	
 	if features is not None and labels is not None:
 		mask = np.isin(labels[:, 0], valid_activities)
