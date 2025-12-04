@@ -58,7 +58,7 @@ def moduleA ():
 
     dataset = remove_outliers(dataset, variables_modules)
     
-    features, labels = extract_features(dataset, window_duration=5.0, overlap=0.5)
+    features, labels = compute_features(dataset, window_duration=5.0, overlap=0.5)
     features = zscore_normalization(features)
 
     # --- Exercise 4.3: PCA ---
@@ -82,7 +82,10 @@ def moduleB ():
 
     # --- Pre game dataset loading and preprocessing ---
 
-    dataset, features, labels = reload_data()
+    dataset = reload_data()
+    dataset = remove_outliers(dataset)
+
+    features, labels = compute_features(dataset, window_duration=5.0, overlap=0.5)
     features, labels = discard_activities(features=features, labels=labels)
     
     '''# --- Exercise 1.1: Analyse sample balance ---
@@ -122,16 +125,16 @@ def moduleB ():
     knn_model = sklearn_knn_classifier(pipeline["train"][ "features"]["a"], pipeline["train"]["labels"], k=k)
     metrics = validate_model(knn_model, pipeline["validate"]["features"]["a"], pipeline["validate"]["labels"], k=k)'''
 
-    # --- Exercise 5.1: Hyperparameter Tuning ---
+    '''# --- Exercise 5.1: Hyperparameter Tuning ---
 
-    hyperparemeter_tuning(features, embeddings, labels, k_values=[1, 3, 5, 7, 9, 11, 17, 19], n_splits=10)
+    hyperparemeter_tuning(features, embeddings, labels, k_values=[1, 3, 5, 7, 9, 11, 17, 19], n_splits=10)'''
 
-    '''# --- Exercise 5.2: Hypothesis Testing ---
+    # --- Exercise 5.2: Hypothesis Testing ---
 
     paired_hypothesis_test("mixed", chosen_metric="f1_score")
     paired_hypothesis_test("participant", chosen_metric="f1_score")
 
-    independent_hypothesis_test(chosen_metric="f1_score")'''
+    independent_hypothesis_test(chosen_metric="f1_score")
 
     # --- Exercise 6: Deployment ---
 

@@ -129,7 +129,7 @@ def classify_sample(model, sample):
     sample = _format_sample(sample)
 
     # Extract features from sample 
-    sample_features, _ = extract_features(sample, window_duration=5.0, overlap=0.0)
+    sample_features, _ = compute_features(sample, window_duration=5.0, overlap=0.0)
     
     # Normalize sample
     sample_features = zscore_normalization(sample_features, mean_values=means, std_values=stds)
