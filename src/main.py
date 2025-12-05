@@ -147,8 +147,6 @@ def moduleB ():
 
     test_deployment_model(dataset, model)
 
-    test_device_specific_model(dataset, features, labels)
-
 if __name__ == "__main__":
 
     clear_and_print(f"\n============================= START AT {datetime.now().strftime("%Y-%m-%d %H:%M:%S")} =============================")

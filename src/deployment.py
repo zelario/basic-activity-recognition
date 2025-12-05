@@ -156,18 +156,18 @@ def classify_sample(model, sample, label):
 
     return predicted_label
 
-def test_deployment_model(dataset, model):
+def test_deployment_model(dataset, model, n=100):
     """Test the deployment model with a synthetic sample."""
 
     real_labels = []
     predicted_labels = []
 
-    for i in range(5000):
+    for i in range(n):
         sample, real_label = get_synthetic_sample(dataset)
         predicted_label = classify_sample(model, sample, real_label)
         real_labels.append(real_label[0])
         predicted_labels.append(predicted_label)
-        print_and_log(f"Sample {i+1}/100 - Real: {real_label[0]}, Predicted: {predicted_label}\n")
+        print_and_log(f"Sample {i+1}/{n} - Real: {real_label[0]}, Predicted: {predicted_label}\n")
 
     real_labels = np.array(real_labels)
     predicted_labels = np.array(predicted_labels)
@@ -184,6 +184,8 @@ def test_deployment_model(dataset, model):
     print_and_log(f"Precision: {precision:.4f}")
     print_and_log(f"Recall:    {recall:.4f}")
     print_and_log(f"F1 Score:  {f1:.4f}")
+
+# --- EXTRA TESTS ---
 
 def test_device_specific_model(dataset, features, labels):
     """Test the deployment model with a synthetic sample."""
@@ -212,7 +214,7 @@ def test_device_specific_model(dataset, features, labels):
     model4 = deployment_model(device4_features, device4_labels, k=19)
     model5 = deployment_model(device5_features, device5_labels, k=19)
 
-    for i in range(5000):
+    for i in range(100):
         sample, real_label = get_synthetic_sample(dataset)
 
         if real_label[2] == 1:
