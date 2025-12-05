@@ -28,84 +28,6 @@ MODEL_NAMES = [
     'Participant-Features-C', 'Participant-Embeddings-C'
 ]
 
-def print_metrics_summary(activity_count=7):
-
-    try:
-        metrics = np.load("npy/metrics.npy", allow_pickle=True).item()
-    except FileNotFoundError:
-        print_and_log("Metrics file not found. Please run hyperparameter_tuning() first.")
-        return
-
-    summary_rows = []
-
-    ordered_keys = [
-        ('mixed', 'features', 'a'),
-        ('mixed', 'embeddings', 'a'),
-        ('mixed', 'features', 'b'),
-        ('mixed', 'embeddings', 'b'),
-        ('mixed', 'features', 'c'),
-        ('mixed', 'embeddings', 'c'),
-        ('participant', 'features', 'a'),
-        ('participant', 'embeddings', 'a'),
-        ('participant', 'features', 'b'),
-        ('participant', 'embeddings', 'b'),
-        ('participant', 'features', 'c'),
-        ('participant', 'embeddings', 'c'),
-    ]
-
-    for idx, (model_name, key) in enumerate(zip(MODEL_NAMES, ordered_keys)):
-        if key in metrics:
-            model_metrics = metrics[key]
-            accuracies = [m["accuracy"] for m in model_metrics]
-            precisions = [m["precision"] for m in model_metrics]
-            recalls = [m["recall"] for m in model_metrics]
-            f1s = [m["f1_score"] for m in model_metrics]
-            summary_rows.append([
-                model_name,
-                np.mean(accuracies), np.std(accuracies),
-                np.mean(precisions), np.std(precisions),
-                np.mean(recalls), np.std(recalls),
-                np.mean(f1s), np.std(f1s)
-            ])
-        else:
-            summary_rows.append([model_name] + [0]*8)
-
-    headers = ["Model", "Acc Mean", "Acc Std", "Prec Mean", "Prec Std",
-               "Recall Mean", "Recall Std", "F1 Mean", "F1 Std"]
-
-    print("\n=== Models' Metrics Summary ===\n")
-    print("{:<45} {:>8} {:>8} {:>10} {:>10} {:>12} {:>12} {:>10} {:>10}".format(*headers))
-
-    for row in summary_rows:
-        print("{:<45} {:>8.4f} {:>8.4f} {:>10.4f} {:>10.4f} {:>12.4f} {:>12.4f} {:>10.4f} {:>10.4f}".format(
-            row[0], row[1], row[2], row[3], row[4], row[5], row[6], row[7], row[8]
-        ))
-
-    activity_acc_table = []
-    for idx, (model_name, key) in enumerate(zip(MODEL_NAMES, ordered_keys)):
-        if key in metrics:
-            model_metrics = metrics[key]
-            confusion_matrices = [m["confusion_matrix"] for m in model_metrics]
-            total_confusion = np.sum(confusion_matrices, axis=0)
-            per_activity_acc = []
-            for i in range(activity_count):
-                correct = total_confusion[i, i]
-                total = total_confusion[i, :].sum()
-                acc = correct / total if total > 0 else 0
-                per_activity_acc.append(acc * 100)
-            activity_acc_table.append(per_activity_acc)
-        else:
-            activity_acc_table.append([0]*activity_count)
-
-    activity_headers = [f"Act{i+1} %" for i in range(activity_count)]
-
-    print("\n=== Per Activity Accuracy Table (%) ===\n")
-    print("{:<45} ".format("Model") + " ".join(["{:>8}".format(h) for h in activity_headers]))
-
-    for idx, row in enumerate(activity_acc_table):
-        name = MODEL_NAMES[idx]
-        print("{:<45} ".format(name) + " ".join(["{:>8.2f}".format(val) for val in row]))
-
 def hyperparemeter_tuning(features, embeddings, labels, k_values=[1], n_splits=1):
     """Run k-NN hyperparameter tuning and model selection for all scenarios, types, and splitting methods.
     For each method (mixed, participant), type (features, embeddings), and scenario (a, b, c), performs n_splits random splits, 
@@ -199,6 +121,84 @@ def hyperparemeter_tuning(features, embeddings, labels, k_values=[1], n_splits=1
                     print_and_log(f"=FINAL= Method: {method}, Type: {type}, Scenario: {scenario}, Split= {split_number}, k= {best_k}, Accuracy: {iteration_metrics['accuracy']:.4f}", path="log/hyperparameter_tuning.log")
 
     np.save("npy/metrics.npy", metrics)
+
+def print_metrics_summary(activity_count=7):
+
+    try:
+        metrics = np.load("npy/metrics.npy", allow_pickle=True).item()
+    except FileNotFoundError:
+        print_and_log("Metrics file not found. Please run hyperparameter_tuning() first.")
+        return
+
+    summary_rows = []
+
+    ordered_keys = [
+        ('mixed', 'features', 'a'),
+        ('mixed', 'embeddings', 'a'),
+        ('mixed', 'features', 'b'),
+        ('mixed', 'embeddings', 'b'),
+        ('mixed', 'features', 'c'),
+        ('mixed', 'embeddings', 'c'),
+        ('participant', 'features', 'a'),
+        ('participant', 'embeddings', 'a'),
+        ('participant', 'features', 'b'),
+        ('participant', 'embeddings', 'b'),
+        ('participant', 'features', 'c'),
+        ('participant', 'embeddings', 'c'),
+    ]
+
+    for idx, (model_name, key) in enumerate(zip(MODEL_NAMES, ordered_keys)):
+        if key in metrics:
+            model_metrics = metrics[key]
+            accuracies = [m["accuracy"] for m in model_metrics]
+            precisions = [m["precision"] for m in model_metrics]
+            recalls = [m["recall"] for m in model_metrics]
+            f1s = [m["f1_score"] for m in model_metrics]
+            summary_rows.append([
+                model_name,
+                np.mean(accuracies), np.std(accuracies),
+                np.mean(precisions), np.std(precisions),
+                np.mean(recalls), np.std(recalls),
+                np.mean(f1s), np.std(f1s)
+            ])
+        else:
+            summary_rows.append([model_name] + [0]*8)
+
+    headers = ["Model", "Acc Mean", "Acc Std", "Prec Mean", "Prec Std",
+               "Recall Mean", "Recall Std", "F1 Mean", "F1 Std"]
+
+    print("\n=== Models' Metrics Summary ===\n")
+    print("{:<45} {:>8} {:>8} {:>10} {:>10} {:>12} {:>12} {:>10} {:>10}".format(*headers))
+
+    for row in summary_rows:
+        print("{:<45} {:>8.4f} {:>8.4f} {:>10.4f} {:>10.4f} {:>12.4f} {:>12.4f} {:>10.4f} {:>10.4f}".format(
+            row[0], row[1], row[2], row[3], row[4], row[5], row[6], row[7], row[8]
+        ))
+
+    activity_acc_table = []
+    for idx, (model_name, key) in enumerate(zip(MODEL_NAMES, ordered_keys)):
+        if key in metrics:
+            model_metrics = metrics[key]
+            confusion_matrices = [m["confusion_matrix"] for m in model_metrics]
+            total_confusion = np.sum(confusion_matrices, axis=0)
+            per_activity_acc = []
+            for i in range(activity_count):
+                correct = total_confusion[i, i]
+                total = total_confusion[i, :].sum()
+                acc = correct / total if total > 0 else 0
+                per_activity_acc.append(acc * 100)
+            activity_acc_table.append(per_activity_acc)
+        else:
+            activity_acc_table.append([0]*activity_count)
+
+    activity_headers = [f"Act{i+1} %" for i in range(activity_count)]
+
+    print("\n=== Per Activity Accuracy Table (%) ===\n")
+    print("{:<45} ".format("Model") + " ".join(["{:>8}".format(h) for h in activity_headers]))
+
+    for idx, row in enumerate(activity_acc_table):
+        name = MODEL_NAMES[idx]
+        print("{:<45} ".format(name) + " ".join(["{:>8.2f}".format(val) for val in row]))
 
 # --- Exercise 5.2: Results Report ---
 
