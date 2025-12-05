@@ -277,6 +277,9 @@ def compute_features(dataset, window_duration=5.0, overlap=0.5):
         features = np.array(features)
         labels = np.array(labels)
 
+        np.save("npy/features.npy", features)
+        np.save("npy/features_labels.npy", labels)
+
         return features, labels
 
 def zscore_normalization(features, mean_values=None, std_values=None, return_parameters=False):

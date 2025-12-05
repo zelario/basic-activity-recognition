@@ -4,7 +4,7 @@ from features import *
 
 # --- Exercise 3.1: Mixed participant splitting ---
 
-def mixed_splitting(features, embeddings, labels):
+def mixed_splitting(features, embeddings, labels, seed=67, increment=0):
     """Split features, embeddings, and labels into training, validate, and test sets using mixed participant splitting.
     Ensures consistent splits across all representations and stratifies by the first label column.
 
@@ -28,11 +28,11 @@ def mixed_splitting(features, embeddings, labels):
 
     # First split: Train+Val and Test
     train_val_features, test_features, train_val_embeddings, test_embeddings, train_val_labels, test_labels = train_test_split(
-        features, embeddings, labels, test_size=0.2, random_state=None, stratify=labels[:, 1])
+        features, embeddings, labels, test_size=0.2, random_state=seed+increment, stratify=labels[:, 1])
 
     # Second split: Train and Val
     train_features, val_features, train_embeddings, validate_embeddings, train_labels, validate_labels = train_test_split(
-        train_val_features, train_val_embeddings, train_val_labels, test_size=0.2, random_state=None, stratify=train_val_labels[:, 1])
+        train_val_features, train_val_embeddings, train_val_labels, test_size=0.2, random_state=seed+increment, stratify=train_val_labels[:, 1])
     
     train_dataset = np.array(train_features), np.array(train_embeddings), np.array(train_labels)
     validate_dataset = np.array(val_features), np.array(validate_embeddings), np.array(validate_labels)
@@ -44,7 +44,7 @@ def mixed_splitting(features, embeddings, labels):
 
 # --- Exercise 3.2: Participant-based splitting ---
 
-def participant_splitting(features, embeddings, labels, train_n=9, validate_n=3, test_n=3):
+def participant_splitting(features, embeddings, labels, train_n=9, validate_n=3, test_n=3, seed=67, increment=0):
     """Split features, embeddings, and labels into training, validate, and test sets by participant groups.
     Ensures no data leakage between sets by assigning unique participants to each split.
 
@@ -74,7 +74,7 @@ def participant_splitting(features, embeddings, labels, train_n=9, validate_n=3,
     test_dataset : tuple
         (features, embeddings, labels) for test set."""
 
-    random = np.random.default_rng(None)
+    random = np.random.default_rng(seed+increment)
     participants = np.unique(labels[:, 1])
     participants_shuffled = random.permutation(participants)
 

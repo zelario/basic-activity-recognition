@@ -129,6 +129,8 @@ def moduleB ():
 
     hyperparemeter_tuning(features, embeddings, labels, k_values=[1, 3, 5, 7, 9, 11, 17, 19], n_splits=10)'''
 
+    print_metrics_summary()
+
     # --- Exercise 5.2: Hypothesis Testing ---
 
     paired_hypothesis_test("mixed", chosen_metric="f1_score")
