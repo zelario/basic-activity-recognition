@@ -126,11 +126,12 @@ def classify_sample(model, sample):
     print_and_log("\n--- Making predictions on sample dataset ---\n")
     
     # Format sample dataset to match every other function
+
     sample = _format_sample(sample)
 
     # Extract features from sample 
-    sample_features, _ = compute_features(sample, window_duration=5.0, overlap=0.0)
-    
+    sample_features, _ = compute_features(sample, window_duration=5.0, overlap=0.0, reaload=False)
+
     # Normalize sample
     sample_features = zscore_normalization(sample_features, mean_values=means, std_values=stds)
 
