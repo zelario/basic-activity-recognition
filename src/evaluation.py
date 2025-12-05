@@ -14,10 +14,10 @@ from log import print_and_log
 from models import sklearn_knn_classifier, validate_model
 from splitting import mixed_splitting, participant_splitting, prepare_pipeline
 import numpy as np
-from scipy.stats import ttest_rel, ttest_ind
 import matplotlib.pyplot as plt
 import seaborn as sns
 from augmentation import *
+from scipy.stats import kstest, mannwhitneyu, ttest_rel, ttest_ind, wilcoxon
 
 MODEL_NAMES = [
     'Mixed-Features-A', 'Mixed-Embeddings-A',
@@ -267,15 +267,26 @@ def paired_hypothesis_test(method, metrics=None, chosen_metric='accuracy'):
         sns.kdeplot(values[i], label=MODEL_NAMES[i], fill=True, ax=ax)
         sns.kdeplot(values[j], label=MODEL_NAMES[j], fill=True, ax=ax)
 
-        stat, p_value = ttest_rel(values[i], values[j])
+        # Kolmogorov-Smirnov test for normality of difference using kstest
+        diff = np.array(values[i]) - np.array(values[j])
+        ks_stat, ks_p = kstest(diff, 'norm', args=(np.mean(diff), np.std(diff)))
 
-        ax.text(0.95, 0.95, f'p={p_value:.4f}', transform=ax.transAxes, ha='right', va='top', fontsize=9, bbox=dict(facecolor='white', alpha=0.7, edgecolor='none'))
+        print_and_log(f"KS test p-value for {MODEL_NAMES[i]} vs {MODEL_NAMES[j]}: {ks_p:.4f}")
+
+        if ks_p > 0.05:
+            stat, p_value = ttest_rel(values[i], values[j])
+            test_name = 'Paired t-test'
+        else:
+            stat, p_value = wilcoxon(values[i], values[j])
+            test_name = 'Wilcoxon'
+
+        ax.text(0.95, 0.95, f'{test_name}\np={p_value:.4f}', transform=ax.transAxes, ha='right', va='top', fontsize=9, bbox=dict(facecolor='white', alpha=0.7, edgecolor='none'))
         ax.set_xlabel(chosen_metric.capitalize(), fontsize=8)
         ax.set_ylabel('Density', fontsize=8)
         ax.grid(True)
         ax.legend(loc='upper left', fontsize=7)
 
-        print_and_log(f"{MODEL_NAMES[i]} vs {MODEL_NAMES[j]}: p-value = {p_value:.4f}")
+        print_and_log(f"{MODEL_NAMES[i]} vs {MODEL_NAMES[j]}: {test_name} p-value = {p_value:.4f}\n")
 
     plt.tight_layout(rect=[0, 0, 1, 0.97])
     plt.suptitle(f'{method.capitalize()} Model Comparisons (All Pairs)', y=0.995)
@@ -317,18 +328,29 @@ def independent_hypothesis_test(metrics=None, chosen_metric='accuracy'):
         mixed_values = [model_metrics[chosen_metric] for model_metrics in metrics[('mixed', type, scenario)]]
         participant_values = [model_metrics[chosen_metric] for model_metrics in metrics[('participant', type, scenario)]]
 
-        stat, p_value = ttest_ind(mixed_values, participant_values)
+        # Kolmogorov-Smirnov test for normality using kstest
+        ks_stat_mixed, ks_p_mixed = kstest(mixed_values, 'norm', args=(np.mean(mixed_values), np.std(mixed_values)))
+        ks_stat_part, ks_p_part = kstest(participant_values, 'norm', args=(np.mean(participant_values), np.std(participant_values)))
+
+        print_and_log(f"KS test p-values: {mixed_name}: {ks_p_mixed:.4f}, {participant_name}: {ks_p_part:.4f}")
+
+        if ks_p_mixed > 0.05 and ks_p_part > 0.05:
+            stat, p_value = ttest_ind(mixed_values, participant_values)
+            test_name = 'Independent t-test'
+        else:
+            stat, p_value = mannwhitneyu(mixed_values, participant_values)
+            test_name = 'Mann-Whitney'
         ax = axs[index]
 
         sns.kdeplot(mixed_values, label=mixed_name, fill=True, ax=ax)
         sns.kdeplot(participant_values, label=participant_name, fill=True, ax=ax)
         ax.set_xlabel(chosen_metric.capitalize(), fontsize=9)
         ax.set_ylabel('Density', fontsize=9)
-        ax.text(0.95, 0.95, f'p={p_value:.4f}', transform=ax.transAxes, ha='right', va='top', fontsize=9, bbox=dict(facecolor='white', alpha=0.7, edgecolor='none'))
+        ax.text(0.95, 0.95, f'{test_name}\np={p_value:.4f}', transform=ax.transAxes, ha='right', va='top', fontsize=9, bbox=dict(facecolor='white', alpha=0.7, edgecolor='none'))
         ax.legend(loc='upper left', fontsize=8)
         ax.grid(True)
 
-        print_and_log(f"{mixed_name} vs {participant_name}: p-value = {p_value:.4f}")
+        print_and_log(f"{mixed_name} vs {participant_name}: {test_name} p-value = {p_value:.4f}\n")
 
     plt.tight_layout(rect=[0, 0, 1, 0.97])
     plt.suptitle('Mixed vs Participant Model Comparisons (All Versions)', y=0.995)
