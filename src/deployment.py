@@ -144,13 +144,28 @@ def test_deployment_model(dataset, model, n=100):
     precision = precision_score(real_labels, predicted_labels, average='weighted', zero_division=0)
     recall = recall_score(real_labels, predicted_labels, average='weighted', zero_division=0)
     f1 = f1_score(real_labels, predicted_labels, average='weighted', zero_division=0)
+    confusion = confusion_matrix(real_labels, predicted_labels, labels=list(range(1, 8)))
 
     print_and_log(f"\n--- Deployment Model Test Metrics ---\n")
-    print_and_log("Confusion Matrix:\n")
     print_and_log(f"\nAccuracy:  {accuracy:.4f}")
     print_and_log(f"Precision: {precision:.4f}")
     print_and_log(f"Recall:    {recall:.4f}")
     print_and_log(f"F1 Score:  {f1:.4f}")
+
+    # Print confusion matrix with labels on axes
+    print_and_log("Confusion Matrix:\n", path="log/validation_metrics.log")
+    print_and_log("         PREDICTED", path="log/validation_metrics.log")
+    print_and_log("      ", end="", path="log/validation_metrics.log")
+    for label in range(1, 8):
+        print_and_log(f"{label:>5}", end="", path="log/validation_metrics.log")
+    print_and_log(path="log/validation_metrics.log")
+    real_label = "REAL"
+    for row_idx, row in enumerate(confusion):
+        letter = real_label[row_idx] if row_idx < len(real_label) else " "
+        print_and_log(f"  {letter}  {row_idx+1:>2} ", end="", path="log/validation_metrics.log")
+        for val in row:
+            print_and_log(f"{val:>5}", end="", path="log/validation_metrics.log")
+        print_and_log(path="log/validation_metrics.log")
 
 # --- EXTRA TESTS ---
 
@@ -208,10 +223,25 @@ def test_device_specific_model(dataset, features, labels):
     precision = precision_score(real_labels, predicted_labels, average='weighted', zero_division=0)
     recall = recall_score(real_labels, predicted_labels, average='weighted', zero_division=0)
     f1 = f1_score(real_labels, predicted_labels, average='weighted', zero_division=0)
+    confusion = confusion_matrix(real_labels, predicted_labels, labels=list(range(1, 8)))
 
     print_and_log(f"\n--- Deployment Model Test Metrics ---\n")
-    print_and_log("Confusion Matrix:\n")
     print_and_log(f"\nAccuracy:  {accuracy:.4f}")
     print_and_log(f"Precision: {precision:.4f}")
     print_and_log(f"Recall:    {recall:.4f}")
     print_and_log(f"F1 Score:  {f1:.4f}")
+
+    # Print confusion matrix with labels on axes
+    print_and_log("Confusion Matrix:\n", path="log/validation_metrics.log")
+    print_and_log("         PREDICTED", path="log/validation_metrics.log")
+    print_and_log("      ", end="", path="log/validation_metrics.log")
+    for label in range(1, 8):
+        print_and_log(f"{label:>5}", end="", path="log/validation_metrics.log")
+    print_and_log(path="log/validation_metrics.log")
+    real_label = "REAL"
+    for row_idx, row in enumerate(confusion):
+        letter = real_label[row_idx] if row_idx < len(real_label) else " "
+        print_and_log(f"  {letter}  {row_idx+1:>2} ", end="", path="log/validation_metrics.log")
+        for val in row:
+            print_and_log(f"{val:>5}", end="", path="log/validation_metrics.log")
+        print_and_log(path="log/validation_metrics.log")
