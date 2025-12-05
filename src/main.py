@@ -127,11 +127,11 @@ def moduleB ():
 
     '''# --- Exercise 5.1: Hyperparameter Tuning ---
 
-    hyperparemeter_tuning(features, embeddings, labels, k_values=[1, 3, 5, 7, 9, 11, 17, 19], n_splits=10)'''
+    hyperparemeter_tuning(features, embeddings, labels, k_values=[1, 3, 5, 7, 9, 11, 17, 19], n_splits=10)
 
-    '''print_metrics_summary()
+    print_metrics_summary()'''
 
-    # --- Exercise 5.2: Hypothesis Testing ---
+    '''# --- Exercise 5.2: Hypothesis Testing ---
 
     paired_hypothesis_test("mixed", chosen_metric="f1_score")
     paired_hypothesis_test("participant", chosen_metric="f1_score")
@@ -145,7 +145,9 @@ def moduleB ():
     sample, label = get_synthetic_sample(dataset)
     classify_sample(model, sample, label)
 
-    test_model_deployment(dataset, model)
+    test_deployment_model(dataset, model)
+
+    test_device_specific_model(dataset, features, labels)
 
 if __name__ == "__main__":
 

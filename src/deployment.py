@@ -156,13 +156,13 @@ def classify_sample(model, sample, label):
 
     return predicted_label
 
-def test_model_deployment(dataset, model):
+def test_deployment_model(dataset, model):
     """Test the deployment model with a synthetic sample."""
 
     real_labels = []
     predicted_labels = []
 
-    for i in range(1000):
+    for i in range(5000):
         sample, real_label = get_synthetic_sample(dataset)
         predicted_label = classify_sample(model, sample, real_label)
         real_labels.append(real_label[0])
@@ -185,3 +185,64 @@ def test_model_deployment(dataset, model):
     print_and_log(f"Recall:    {recall:.4f}")
     print_and_log(f"F1 Score:  {f1:.4f}")
 
+def test_device_specific_model(dataset, features, labels):
+    """Test the deployment model with a synthetic sample."""
+
+    real_labels = []
+    predicted_labels = []
+
+    device1_features = features[labels[:, 2] == 1]
+    device1_labels = labels[labels[:, 2] == 1]
+
+    device2_features = features[labels[:, 2] == 2]
+    device2_labels = labels[labels[:, 2] == 2]
+
+    device3_features = features[labels[:, 2] == 3]
+    device3_labels = labels[labels[:, 2] == 3]
+
+    device4_features = features[labels[:, 2] == 4]
+    device4_labels = labels[labels[:, 2] == 4]
+
+    device5_features = features[labels[:, 2] == 5]
+    device5_labels = labels[labels[:, 2] == 5]
+
+    model1 = deployment_model(device1_features, device1_labels, k=19)
+    model2 = deployment_model(device2_features, device2_labels, k=19)
+    model3 = deployment_model(device3_features, device3_labels, k=19)
+    model4 = deployment_model(device4_features, device4_labels, k=19)
+    model5 = deployment_model(device5_features, device5_labels, k=19)
+
+    for i in range(5000):
+        sample, real_label = get_synthetic_sample(dataset)
+
+        if real_label[2] == 1:
+            model = model1
+        elif real_label[2] == 2:
+            model = model2
+        elif real_label[2] == 3:
+            model = model3
+        elif real_label[2] == 4:
+            model = model4
+        else:
+            model = model5
+
+        predicted_label = classify_sample(model, sample, real_label)
+        real_labels.append(real_label[0])
+        predicted_labels.append(predicted_label)
+        print_and_log(f"Sample {i+1}/100 - Real: {real_label[0]}, Predicted: {predicted_label}\n")
+
+    real_labels = np.array(real_labels)
+    predicted_labels = np.array(predicted_labels)
+
+    # Compute metrics
+    accuracy = accuracy_score(real_labels, predicted_labels)
+    precision = precision_score(real_labels, predicted_labels, average='weighted', zero_division=0)
+    recall = recall_score(real_labels, predicted_labels, average='weighted', zero_division=0)
+    f1 = f1_score(real_labels, predicted_labels, average='weighted', zero_division=0)
+
+    print_and_log(f"\n--- Deployment Model Test Metrics ---\n")
+    print_and_log("Confusion Matrix:\n")
+    print_and_log(f"\nAccuracy:  {accuracy:.4f}")
+    print_and_log(f"Precision: {precision:.4f}")
+    print_and_log(f"Recall:    {recall:.4f}")
+    print_and_log(f"F1 Score:  {f1:.4f}")

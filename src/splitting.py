@@ -149,18 +149,18 @@ def prepare_pipeline(split):
     # === Scenario b: PCA-reduced features and embeddings (90% variance) ===
 
     # Normalize training and combined features and embeddings
-    normalized_train_features, train_features_means, train_features_stds = zscore_normalization(train_features_all, return_parameters=True)
-    normalized_train_embeddings, train_embeddings_means, train_embeddings_stds = zscore_normalization(train_embeddings_all, return_parameters=True)
+    train_features_all, train_features_means, train_features_stds = zscore_normalization(train_features_all, return_parameters=True)
+    train_embeddings_all, train_embeddings_means, train_embeddings_stds = zscore_normalization(train_embeddings_all, return_parameters=True)
 
-    normalized_combined_features, combined_features_means, combined_features_stds = zscore_normalization(combined_features_all, return_parameters=True)
-    normalized_combined_embeddings, combined_embeddings_means, combined_embeddings_stds = zscore_normalization(combined_embeddings_all, return_parameters=True)
+    combined_features_all, combined_features_means, combined_features_stds = zscore_normalization(combined_features_all, return_parameters=True)
+    combined_embeddings_all, combined_embeddings_means, combined_embeddings_stds = zscore_normalization(combined_embeddings_all, return_parameters=True)
 
     # Compute PCA on normalized training and combined features and embeddings
-    train_features_pca, explained_variance_train_features, pca_object_train_features = compute_pca(normalized_train_features)
-    train_embeddings_pca, explained_variance_train_embeddings, pca_object_train_embeddings = compute_pca(normalized_train_embeddings)
+    train_features_pca, explained_variance_train_features, pca_object_train_features = compute_pca(train_features_all)
+    train_embeddings_pca, explained_variance_train_embeddings, pca_object_train_embeddings = compute_pca(train_embeddings_all)
 
-    combined_features_pca, explained_variance_combined_features, pca_object_combined_features = compute_pca(normalized_combined_features)
-    combined_embeddings_pca, explained_variance_combined_embeddings, pca_object_combined_embeddings = compute_pca(normalized_combined_embeddings)
+    combined_features_pca, explained_variance_combined_features, pca_object_combined_features = compute_pca(combined_features_all)
+    combined_embeddings_pca, explained_variance_combined_embeddings, pca_object_combined_embeddings = compute_pca(combined_embeddings_all)
 
     # Determine number of components to retain 90% variance
     cumulative_train_features = np.cumsum(explained_variance_train_features)
@@ -207,21 +207,21 @@ def prepare_pipeline(split):
     # === Scenario c: ReliefF-selected top 15 features ===
 
     # Select top 15 features using ReliefF on normalized training features and embeddings
-    top_15_train_features_indices = relief(normalized_train_features, train_labels, top_n=15, print_output=False)
-    top_15_train_embeddings_indices = relief(normalized_train_embeddings, train_labels, top_n=15, print_output=False)
+    top_15_train_features_indices = relief(train_features_all, train_labels, top_n=15, print_output=False)
+    top_15_train_embeddings_indices = relief(train_embeddings_all, train_labels, top_n=15, print_output=False)
 
-    top_15_combined_features_indices = relief(normalized_combined_features, combined_labels_all, top_n=15, print_output=False)
-    top_15_combined_embeddings_indices = relief(normalized_combined_embeddings, combined_labels_all, top_n=15, print_output=False)
+    top_15_combined_features_indices = relief(combined_features_all, combined_labels_all, top_n=15, print_output=False)
+    top_15_combined_embeddings_indices = relief(combined_embeddings_all, combined_labels_all, top_n=15, print_output=False)
 
     # Apply feature selection to all splits
-    train_features_relief = normalized_train_features[:, top_15_train_features_indices]
+    train_features_relief = train_features_all[:, top_15_train_features_indices]
     validate_features_relief = normalized_validate_features[:, top_15_train_features_indices]
-    combined_features_relief = normalized_combined_features[:, top_15_combined_features_indices]
+    combined_features_relief = combined_features_all[:, top_15_combined_features_indices]
     test_features_relief = normalized_test_features[:, top_15_combined_features_indices]
 
-    train_embeddings_relief = normalized_train_embeddings[:, top_15_train_embeddings_indices]
+    train_embeddings_relief = train_embeddings_all[:, top_15_train_embeddings_indices]
     validate_embeddings_relief = normalized_validate_embeddings[:, top_15_train_embeddings_indices]
-    combined_embeddings_relief = normalized_combined_embeddings[:, top_15_combined_embeddings_indices]
+    combined_embeddings_relief = combined_embeddings_all[:, top_15_combined_embeddings_indices]
     test_embeddings_relief = normalized_test_embeddings[:, top_15_combined_embeddings_indices]
 
     # Prepare pipeline dictionary
