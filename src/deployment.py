@@ -9,57 +9,62 @@ This module contains functions for:
 - Applying feature extraction, normalization, feature selection, and classification steps.
 """
 
-from augmentation import discard_activities
 from features import *
 from outliers import *
 from embeddings import *
 from models import *
 import numpy as np
-from augmentation import augment_dataset
+from augmentation import *
 
-def get_random_sample(dataset):
-    """Select a random sample of 256 rows from a chosen activity, participant, and device.
+def get_synthetic_sample(dataset, noise_std=0.01, activity=None, participant=None, device=None):
+    """Generate a synthetic sample by selecting 256 consecutive rows from real data and adding noise.
 
     Parameters
     ----------
-    dataset : matrix
-        Raw dataset matrix (n_samples, 13 columns).
+    dataset : np.ndarray
+        Raw dataset (n_rows, 13 columns)
+    activity : int or None
+    participant : int or None
+    device : int or None
+    noise_std : float
+        Gaussian noise standard deviation
 
     Returns
     -------
-    sample : matrix, shape (256, 9)
-        Array of shape (256, 9) with sensor data (acc x y z, gyr x y z, mag x y z)."""
+    sample : np.ndarray
+        Synthetic sequence (256, 9)"""
+    
+    # Filter activities
+    dataset = dataset[(dataset[:, 11] >= 1) & (dataset[:, 11] <= 7)]
 
-    # Only consider activities 1 to 7
-    activities_mask = (dataset[:, 11] >= 1) & (dataset[:, 11] <= 7)
-    dataset = dataset[activities_mask]
+    # Pick random if not specified
+    rng = np.random.default_rng()
+    if activity is None:
+        activity = int(rng.choice(np.unique(dataset[:, 11].astype(int))))
+    if participant is None:
+        participant = int(rng.choice(np.unique(dataset[:, 12].astype(int))))
+    if device is None:
+        device = int(rng.choice(np.unique(dataset[:, 0].astype(int))))
 
-    # Randomly choose activity, participant, device
-    activities = np.unique(dataset[:, 11])
-    participants = np.unique(dataset[:, 12])
-    devices = np.unique(dataset[:, 0])
+    # Select subset
+    mask = (dataset[:, 12] == participant) & \
+           (dataset[:, 0] == device) & \
+           (dataset[:, 11] == activity)
+    masked_dataset = dataset[mask][:, 1:10]
 
-    activity = np.random.choice(activities)
-    participant = np.random.choice(participants)
-    device = np.random.choice(devices)
+    if masked_dataset.shape[0] < 256:
+        get_synthetic_sample(dataset)
 
-    print_and_log("\n--- Random Sample Generation ---")
-    print_and_log("\nChoosing random sample from activity:", int(activity))
+    try:
+        start_index = rng.integers(0, masked_dataset.shape[0] - 256 + 1)
+        sample = masked_dataset[start_index:start_index + 256]
+        sample = sample + np.random.normal(0, noise_std, sample.shape)
+    except ValueError:
+        return get_synthetic_sample(dataset)
 
-    mask = (
-        (dataset[:, 12] == participant) &
-        (dataset[:, 0] == device) &
-        (dataset[:, 11] == activity)
-    )
+    label = np.array((activity, participant, device))
 
-    group = dataset[mask]
-    if group.shape[0] >= 256:
-        shuffled_group = group.copy()
-        np.random.shuffle(shuffled_group)
-        sample = shuffled_group[:256, 1:10]
-        return sample
-    else:
-        return get_random_sample(dataset)
+    return sample, label
 
 def _format_sample(sample_dataset):
     """Format a sample to match the expected input for feature extraction and classification.
@@ -91,6 +96,10 @@ def deployment_model(dataset, labels, k=19):
     ----------
     train_dataset : matrix"""
 
+    # Apply activity augmentation
+    dataset, labels = augment_dataset(dataset, labels)
+
+    # Normalize the dataset and get mean/std for deployment
     dataset, means, stds = zscore_normalization(dataset, return_parameters=True)
 
     # Compute PCA on the dataset
@@ -108,7 +117,7 @@ def deployment_model(dataset, labels, k=19):
 
     return model
 
-def classify_sample(model, sample):
+def classify_sample(model, sample, label):
     """Deploy the trained model to make predictions on a sample dataset.
 
     This function loads the trained model features and labels, applies activity filtering and augmentation,
@@ -130,7 +139,7 @@ def classify_sample(model, sample):
     sample = _format_sample(sample)
 
     # Extract features from sample 
-    sample_features, _ = compute_features(sample, window_duration=5.0, overlap=0.0, reaload=False)
+    sample_features, _ = compute_features(sample, window_duration=5.0, overlap=0.0, reload=False)
 
     # Normalize sample
     sample_features = zscore_normalization(sample_features, mean_values=means, std_values=stds)
@@ -140,6 +149,39 @@ def classify_sample(model, sample):
     sample_pca = sample_pca[:, :n_components]
 
     # Predict label using k-NN
-    predicted_label = knn_model.predict(sample_pca)
+    predicted_label = knn_model.predict(sample_pca)[0]
 
+    print_and_log(f"Generating synthetic sample for activity {label[0]}")
     print_and_log(f"Predicted label for the sample dataset: {predicted_label}")
+
+    return predicted_label
+
+def test_model_deployment(dataset, model):
+    """Test the deployment model with a synthetic sample."""
+
+    real_labels = []
+    predicted_labels = []
+
+    for i in range(1000):
+        sample, real_label = get_synthetic_sample(dataset)
+        predicted_label = classify_sample(model, sample, real_label)
+        real_labels.append(real_label[0])
+        predicted_labels.append(predicted_label)
+        print_and_log(f"Sample {i+1}/100 - Real: {real_label[0]}, Predicted: {predicted_label}\n")
+
+    real_labels = np.array(real_labels)
+    predicted_labels = np.array(predicted_labels)
+
+    # Compute metrics
+    accuracy = accuracy_score(real_labels, predicted_labels)
+    precision = precision_score(real_labels, predicted_labels, average='weighted', zero_division=0)
+    recall = recall_score(real_labels, predicted_labels, average='weighted', zero_division=0)
+    f1 = f1_score(real_labels, predicted_labels, average='weighted', zero_division=0)
+
+    print_and_log(f"\n--- Deployment Model Test Metrics ---\n")
+    print_and_log("Confusion Matrix:\n")
+    print_and_log(f"\nAccuracy:  {accuracy:.4f}")
+    print_and_log(f"Precision: {precision:.4f}")
+    print_and_log(f"Recall:    {recall:.4f}")
+    print_and_log(f"F1 Score:  {f1:.4f}")
+

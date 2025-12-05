@@ -129,7 +129,7 @@ def moduleB ():
 
     hyperparemeter_tuning(features, embeddings, labels, k_values=[1, 3, 5, 7, 9, 11, 17, 19], n_splits=10)'''
 
-    ''''print_metrics_summary()
+    '''print_metrics_summary()
 
     # --- Exercise 5.2: Hypothesis Testing ---
 
@@ -142,8 +142,10 @@ def moduleB ():
 
     model = deployment_model(features, labels, k=19)
 
-    sample = get_random_sample(dataset)
-    classify_sample(model, sample)
+    sample, label = get_synthetic_sample(dataset)
+    classify_sample(model, sample, label)
+
+    test_model_deployment(dataset, model)
 
 if __name__ == "__main__":
 

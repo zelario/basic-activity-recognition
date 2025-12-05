@@ -198,7 +198,7 @@ def extract_features(signal):
 
     return feature_values
 
-def compute_features(dataset, window_duration=5.0, overlap=0.5, reaload=True):
+def compute_features(dataset, window_duration=5.0, overlap=0.5, reload=True):
     """Extract features per window for acceleration, gyroscope, and magnetometer modules.
 
     Parameters
@@ -219,7 +219,7 @@ def compute_features(dataset, window_duration=5.0, overlap=0.5, reaload=True):
     labels : matrix, shape (n_windows, 3)
         Integer matrix: (activity_label, participant_id, device_id) for each window."""
     
-    if reaload:
+    if reload:
         try:
             features = np.load("npy/features.npy", allow_pickle=True)
             labels = np.load("npy/features_labels.npy", allow_pickle=True)
@@ -278,8 +278,9 @@ def compute_features(dataset, window_duration=5.0, overlap=0.5, reaload=True):
     features = np.array(features)
     labels = np.array(labels)
 
-    np.save("npy/features.npy", features)
-    np.save("npy/features_labels.npy", labels)
+    if reload:
+        np.save("npy/features.npy", features)
+        np.save("npy/features_labels.npy", labels)
 
     return features, labels
 
