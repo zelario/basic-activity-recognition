@@ -56,7 +56,7 @@ def moduleA ():
 
     # --- Exercise 4.2: Feature Extraction ---
 
-    dataset = remove_outliers(dataset, variables_modules)
+    '''dataset = remove_outliers(dataset, variables_modules)'''
     
     features, labels = compute_features(dataset, window_duration=5.0, overlap=0.5)
     features = zscore_normalization(features)
@@ -83,7 +83,8 @@ def moduleB ():
     # --- Pre game dataset loading and preprocessing ---
 
     dataset = reload_data()
-    dataset = remove_outliers(dataset)
+    
+    '''dataset = remove_outliers(dataset)'''
 
     features, labels = compute_features(dataset, window_duration=5.0, overlap=0.5)
     features, labels = discard_activities(features=features, labels=labels)
