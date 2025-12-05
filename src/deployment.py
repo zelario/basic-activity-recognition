@@ -66,29 +66,6 @@ def get_synthetic_sample(dataset, noise_std=0.01, activity=None, participant=Non
 
     return sample, label
 
-def _format_sample(sample_dataset):
-    """Format a sample to match the expected input for feature extraction and classification.
-
-    Parameters
-    ----------
-    sample_dataset : matrix, shape (256, 9)
-        Array with sensor data.
-
-    Returns
-    -------
-    formated_sample : matrix, shape (256, 13)
-        Array with all required columns for downstream processing."""
-    
-    formated_sample = np.zeros((256, 13))
-    formated_sample[:, 0] = 0  # device id
-    formated_sample[:, 1:4] = sample_dataset[:, 0:3]   # acc x, y, z
-    formated_sample[:, 4:7] = sample_dataset[:, 3:6]   # gyr x, y, z
-    formated_sample[:, 7:10] = sample_dataset[:, 6:9]  # mag x, y, z
-    formated_sample[:, 10] = 0  # timestamp
-    formated_sample[:, 11] = 1  # activity label
-    formated_sample[:, 12] = 1  # participant id
-    return formated_sample
-
 def deployment_model(dataset, labels, k=19):
     """Train and return a knn model for deployment using scikit-learn's KNeighborsClassifier.
 
@@ -102,18 +79,10 @@ def deployment_model(dataset, labels, k=19):
     # Normalize the dataset and get mean/std for deployment
     dataset, means, stds = zscore_normalization(dataset, return_parameters=True)
 
-    # Compute PCA on the dataset
-    pca, explained_variances, pca_object = compute_pca(dataset)
+    # Train k-NN model
+    knn_model = sklearn_knn_classifier(dataset, labels, k=k)
 
-    # Determine number of components to retain 90% variance
-    cumulative = np.cumsum(explained_variances)
-    n_components = np.argmax(cumulative >= 0.9) + 1
-
-    pca = pca[:, :n_components]
-
-    knn_model = sklearn_knn_classifier(pca, labels, k=k)
-
-    model = (knn_model, means, stds, pca_object, n_components)
+    model = (knn_model, means, stds)
 
     return model
 
@@ -130,26 +99,24 @@ def classify_sample(model, sample, label):
         Array of shape (256, 9) with sensor data to classify.
     """
 
-    knn_model, means, stds, pca_object, n_components = model
+    knn_model, means, stds = model
 
     print_and_log("\n--- Making predictions on sample dataset ---\n")
     
     # Format sample dataset to match every other function
-
-    sample = _format_sample(sample)
+    formated_sample = np.zeros((256, 13))
+    formated_sample[:, 1:4] = sample[:, 0:3]   # acc x, y, z
+    formated_sample[:, 4:7] = sample[:, 3:6]   # gyr x, y, z
+    formated_sample[:, 7:10] = sample[:, 6:9]  # mag x, y, z
 
     # Extract features from sample 
-    sample_features, _ = compute_features(sample, window_duration=5.0, overlap=0.0, reload=False)
+    sample_features, _ = compute_features(formated_sample, window_duration=5.0, overlap=0.0, reload=False)
 
     # Normalize sample
     sample_features = zscore_normalization(sample_features, mean_values=means, std_values=stds)
 
-    # Apply PCA to sample
-    sample_pca = compute_pca(sample_features, pca_object=pca_object)
-    sample_pca = sample_pca[:, :n_components]
-
     # Predict label using k-NN
-    predicted_label = knn_model.predict(sample_pca)[0]
+    predicted_label = knn_model.predict(sample_features)[0]
 
     print_and_log(f"Generating synthetic sample for activity {label[0]}")
     print_and_log(f"Predicted label for the sample dataset: {predicted_label}")
