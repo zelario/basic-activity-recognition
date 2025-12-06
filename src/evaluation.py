@@ -116,7 +116,7 @@ def hyperparemeter_tuning(features, embeddings, labels, k_values=[1], n_splits=1
                     iteration_metrics = validate_model(knn_model, test_dataset, test_labels, k=best_k, scenario=scenario, type=type, method=method)
 
                     # Keep metrics and labels
-                    metrics[(method, type, scenario)].append(iteration_metrics)
+                    metrics[(method, type, scenario)].append((iteration_metrics, best_k))
 
                     print_and_log(f"=FINAL= Method: {method}, Type: {type}, Scenario: {scenario}, Split= {split_number}, k= {best_k}, Accuracy: {iteration_metrics['accuracy']:.4f}", path="log/hyperparameter_tuning.log")
 
@@ -150,36 +150,43 @@ def print_metrics_summary(activity_count=7):
     for idx, (model_name, key) in enumerate(zip(MODEL_NAMES, ordered_keys)):
         if key in metrics:
             model_metrics = metrics[key]
-            accuracies = [m["accuracy"] for m in model_metrics]
-            precisions = [m["precision"] for m in model_metrics]
-            recalls = [m["recall"] for m in model_metrics]
-            f1s = [m["f1_score"] for m in model_metrics]
+            accuracies = [m[0]["accuracy"] for m in model_metrics]
+            precisions = [m[0]["precision"] for m in model_metrics]
+            recalls = [m[0]["recall"] for m in model_metrics]
+            f1s = [m[0]["f1_score"] for m in model_metrics]
+            ks = [m[1] for m in model_metrics]
+            # Mode k value
+            if ks:
+                mode_k = max(set(ks), key=ks.count)
+            else:
+                mode_k = 0
             summary_rows.append([
                 model_name,
                 np.mean(accuracies), np.std(accuracies),
                 np.mean(precisions), np.std(precisions),
                 np.mean(recalls), np.std(recalls),
-                np.mean(f1s), np.std(f1s)
+                np.mean(f1s), np.std(f1s),
+                mode_k
             ])
         else:
-            summary_rows.append([model_name] + [0]*8)
+            summary_rows.append([model_name] + [0]*9)
 
     headers = ["Model", "Acc Mean", "Acc Std", "Prec Mean", "Prec Std",
-               "Recall Mean", "Recall Std", "F1 Mean", "F1 Std"]
+               "Recall Mean", "Recall Std", "F1 Mean", "F1 Std", "Mode k"]
 
     print("\n=== Models' Metrics Summary ===\n")
-    print("{:<45} {:>8} {:>8} {:>10} {:>10} {:>12} {:>12} {:>10} {:>10}".format(*headers))
+    print("{:<45} {:>8} {:>8} {:>10} {:>10} {:>12} {:>12} {:>10} {:>10} {:>7}".format(*headers))
 
     for row in summary_rows:
-        print("{:<45} {:>8.4f} {:>8.4f} {:>10.4f} {:>10.4f} {:>12.4f} {:>12.4f} {:>10.4f} {:>10.4f}".format(
-            row[0], row[1], row[2], row[3], row[4], row[5], row[6], row[7], row[8]
+        print("{:<45} {:>8.4f} {:>8.4f} {:>10.4f} {:>10.4f} {:>12.4f} {:>12.4f} {:>10.4f} {:>10.4f} {:>7}".format(
+            row[0], row[1], row[2], row[3], row[4], row[5], row[6], row[7], row[8], row[9]
         ))
 
     activity_acc_table = []
     for idx, (model_name, key) in enumerate(zip(MODEL_NAMES, ordered_keys)):
         if key in metrics:
             model_metrics = metrics[key]
-            confusion_matrices = [m["confusion_matrix"] for m in model_metrics]
+            confusion_matrices = [m[0]["confusion_matrix"] for m in model_metrics]
             total_confusion = np.sum(confusion_matrices, axis=0)
             per_activity_acc = []
             for i in range(activity_count):
@@ -252,7 +259,7 @@ def paired_hypothesis_test(method, metrics=None, chosen_metric='accuracy'):
         (method, 'embeddings', 'c')
     ]
 
-    values = [[model_metrics[chosen_metric] for model_metrics in metrics[key]] for key in model_keys]
+    values = [[m[0][chosen_metric] for m in metrics[key]] for key in model_keys]
 
     pairs = []
     for i in range(len(model_keys)):
@@ -325,8 +332,8 @@ def independent_hypothesis_test(metrics=None, chosen_metric='accuracy'):
         mixed_name = MODEL_NAMES[mixed_index]
         participant_name = MODEL_NAMES[participant_index]
 
-        mixed_values = [model_metrics[chosen_metric] for model_metrics in metrics[('mixed', type, scenario)]]
-        participant_values = [model_metrics[chosen_metric] for model_metrics in metrics[('participant', type, scenario)]]
+        mixed_values = [m[0][chosen_metric] for m in metrics[('mixed', type, scenario)]]
+        participant_values = [m[0][chosen_metric] for m in metrics[('participant', type, scenario)]]
 
         # Kolmogorov-Smirnov test for normality using kstest
         ks_stat_mixed, ks_p_mixed = kstest(mixed_values, 'norm', args=(np.mean(mixed_values), np.std(mixed_values)))
