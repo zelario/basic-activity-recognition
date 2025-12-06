@@ -14,10 +14,10 @@ from log import print_and_log
 from models import sklearn_knn_classifier, validate_model
 from splitting import mixed_splitting, participant_splitting, prepare_pipeline
 import numpy as np
-from scipy.stats import ttest_rel, ttest_ind
 import matplotlib.pyplot as plt
 import seaborn as sns
 from augmentation import *
+from scipy.stats import kstest, mannwhitneyu, ttest_rel, ttest_ind, wilcoxon
 
 MODEL_NAMES = [
     'Mixed-Features-A', 'Mixed-Embeddings-A',
@@ -54,7 +54,7 @@ def hyperparemeter_tuning(features, embeddings, labels, k_values=[1], n_splits=1
     # For each splitting method
     for method in ['participant','mixed']:
 
-        splits = [mixed_splitting(features, embeddings, labels) for _ in range(n_splits)] if method == 'mixed' else [participant_splitting(features, embeddings, labels) for _ in range(n_splits)]
+        splits = [mixed_splitting(features, embeddings, labels, increment=i) for i in range(n_splits)] if method == 'mixed' else [participant_splitting(features, embeddings, labels, increment=i) for i in range(n_splits)]
 
         pipelines = [prepare_pipeline(split) for split in splits]
 
@@ -118,9 +118,87 @@ def hyperparemeter_tuning(features, embeddings, labels, k_values=[1], n_splits=1
                     # Keep metrics and labels
                     metrics[(method, type, scenario)].append(iteration_metrics)
 
-                    print_and_log(f"Method: {method}, Type: {type}, Scenario: {scenario}, Split= {split_number}, k= {best_k}, Accuracy: {iteration_metrics['accuracy']:.4f}")
-    
+                    print_and_log(f"=FINAL= Method: {method}, Type: {type}, Scenario: {scenario}, Split= {split_number}, k= {best_k}, Accuracy: {iteration_metrics['accuracy']:.4f}", path="log/hyperparameter_tuning.log")
+
     np.save("npy/metrics.npy", metrics)
+
+def print_metrics_summary(activity_count=7):
+
+    try:
+        metrics = np.load("npy/metrics.npy", allow_pickle=True).item()
+    except FileNotFoundError:
+        print_and_log("Metrics file not found. Please run hyperparameter_tuning() first.")
+        return
+
+    summary_rows = []
+
+    ordered_keys = [
+        ('mixed', 'features', 'a'),
+        ('mixed', 'embeddings', 'a'),
+        ('mixed', 'features', 'b'),
+        ('mixed', 'embeddings', 'b'),
+        ('mixed', 'features', 'c'),
+        ('mixed', 'embeddings', 'c'),
+        ('participant', 'features', 'a'),
+        ('participant', 'embeddings', 'a'),
+        ('participant', 'features', 'b'),
+        ('participant', 'embeddings', 'b'),
+        ('participant', 'features', 'c'),
+        ('participant', 'embeddings', 'c'),
+    ]
+
+    for idx, (model_name, key) in enumerate(zip(MODEL_NAMES, ordered_keys)):
+        if key in metrics:
+            model_metrics = metrics[key]
+            accuracies = [m["accuracy"] for m in model_metrics]
+            precisions = [m["precision"] for m in model_metrics]
+            recalls = [m["recall"] for m in model_metrics]
+            f1s = [m["f1_score"] for m in model_metrics]
+            summary_rows.append([
+                model_name,
+                np.mean(accuracies), np.std(accuracies),
+                np.mean(precisions), np.std(precisions),
+                np.mean(recalls), np.std(recalls),
+                np.mean(f1s), np.std(f1s)
+            ])
+        else:
+            summary_rows.append([model_name] + [0]*8)
+
+    headers = ["Model", "Acc Mean", "Acc Std", "Prec Mean", "Prec Std",
+               "Recall Mean", "Recall Std", "F1 Mean", "F1 Std"]
+
+    print("\n=== Models' Metrics Summary ===\n")
+    print("{:<45} {:>8} {:>8} {:>10} {:>10} {:>12} {:>12} {:>10} {:>10}".format(*headers))
+
+    for row in summary_rows:
+        print("{:<45} {:>8.4f} {:>8.4f} {:>10.4f} {:>10.4f} {:>12.4f} {:>12.4f} {:>10.4f} {:>10.4f}".format(
+            row[0], row[1], row[2], row[3], row[4], row[5], row[6], row[7], row[8]
+        ))
+
+    activity_acc_table = []
+    for idx, (model_name, key) in enumerate(zip(MODEL_NAMES, ordered_keys)):
+        if key in metrics:
+            model_metrics = metrics[key]
+            confusion_matrices = [m["confusion_matrix"] for m in model_metrics]
+            total_confusion = np.sum(confusion_matrices, axis=0)
+            per_activity_acc = []
+            for i in range(activity_count):
+                correct = total_confusion[i, i]
+                total = total_confusion[i, :].sum()
+                acc = correct / total if total > 0 else 0
+                per_activity_acc.append(acc * 100)
+            activity_acc_table.append(per_activity_acc)
+        else:
+            activity_acc_table.append([0]*activity_count)
+
+    activity_headers = [f"Act{i+1} %" for i in range(activity_count)]
+
+    print("\n=== Per Activity Accuracy Table (%) ===\n")
+    print("{:<45} ".format("Model") + " ".join(["{:>8}".format(h) for h in activity_headers]))
+
+    for idx, row in enumerate(activity_acc_table):
+        name = MODEL_NAMES[idx]
+        print("{:<45} ".format(name) + " ".join(["{:>8.2f}".format(val) for val in row]))
 
 # --- Exercise 5.2: Results Report ---
 
@@ -189,15 +267,26 @@ def paired_hypothesis_test(method, metrics=None, chosen_metric='accuracy'):
         sns.kdeplot(values[i], label=MODEL_NAMES[i], fill=True, ax=ax)
         sns.kdeplot(values[j], label=MODEL_NAMES[j], fill=True, ax=ax)
 
-        stat, p_value = ttest_rel(values[i], values[j])
+        # Kolmogorov-Smirnov test for normality of difference using kstest
+        diff = np.array(values[i]) - np.array(values[j])
+        ks_stat, ks_p = kstest(diff, 'norm', args=(np.mean(diff), np.std(diff)))
 
-        ax.text(0.95, 0.95, f'p={p_value:.4f}', transform=ax.transAxes, ha='right', va='top', fontsize=9, bbox=dict(facecolor='white', alpha=0.7, edgecolor='none'))
+        print_and_log(f"KS test p-value for {MODEL_NAMES[i]} vs {MODEL_NAMES[j]}: {ks_p:.4f}")
+
+        if ks_p > 0.05:
+            stat, p_value = ttest_rel(values[i], values[j])
+            test_name = 'Paired t-test'
+        else:
+            stat, p_value = wilcoxon(values[i], values[j])
+            test_name = 'Wilcoxon'
+
+        ax.text(0.95, 0.95, f'{test_name}\np={p_value:.4f}', transform=ax.transAxes, ha='right', va='top', fontsize=9, bbox=dict(facecolor='white', alpha=0.7, edgecolor='none'))
         ax.set_xlabel(chosen_metric.capitalize(), fontsize=8)
         ax.set_ylabel('Density', fontsize=8)
         ax.grid(True)
         ax.legend(loc='upper left', fontsize=7)
 
-        print_and_log(f"{MODEL_NAMES[i]} vs {MODEL_NAMES[j]}: p-value = {p_value:.4f}")
+        print_and_log(f"{MODEL_NAMES[i]} vs {MODEL_NAMES[j]}: {test_name} p-value = {p_value:.4f}\n")
 
     plt.tight_layout(rect=[0, 0, 1, 0.97])
     plt.suptitle(f'{method.capitalize()} Model Comparisons (All Pairs)', y=0.995)
@@ -239,18 +328,29 @@ def independent_hypothesis_test(metrics=None, chosen_metric='accuracy'):
         mixed_values = [model_metrics[chosen_metric] for model_metrics in metrics[('mixed', type, scenario)]]
         participant_values = [model_metrics[chosen_metric] for model_metrics in metrics[('participant', type, scenario)]]
 
-        stat, p_value = ttest_ind(mixed_values, participant_values)
+        # Kolmogorov-Smirnov test for normality using kstest
+        ks_stat_mixed, ks_p_mixed = kstest(mixed_values, 'norm', args=(np.mean(mixed_values), np.std(mixed_values)))
+        ks_stat_part, ks_p_part = kstest(participant_values, 'norm', args=(np.mean(participant_values), np.std(participant_values)))
+
+        print_and_log(f"KS test p-values: {mixed_name}: {ks_p_mixed:.4f}, {participant_name}: {ks_p_part:.4f}")
+
+        if ks_p_mixed > 0.05 and ks_p_part > 0.05:
+            stat, p_value = ttest_ind(mixed_values, participant_values)
+            test_name = 'Independent t-test'
+        else:
+            stat, p_value = mannwhitneyu(mixed_values, participant_values)
+            test_name = 'Mann-Whitney'
         ax = axs[index]
 
         sns.kdeplot(mixed_values, label=mixed_name, fill=True, ax=ax)
         sns.kdeplot(participant_values, label=participant_name, fill=True, ax=ax)
         ax.set_xlabel(chosen_metric.capitalize(), fontsize=9)
         ax.set_ylabel('Density', fontsize=9)
-        ax.text(0.95, 0.95, f'p={p_value:.4f}', transform=ax.transAxes, ha='right', va='top', fontsize=9, bbox=dict(facecolor='white', alpha=0.7, edgecolor='none'))
+        ax.text(0.95, 0.95, f'{test_name}\np={p_value:.4f}', transform=ax.transAxes, ha='right', va='top', fontsize=9, bbox=dict(facecolor='white', alpha=0.7, edgecolor='none'))
         ax.legend(loc='upper left', fontsize=8)
         ax.grid(True)
 
-        print_and_log(f"{mixed_name} vs {participant_name}: p-value = {p_value:.4f}")
+        print_and_log(f"{mixed_name} vs {participant_name}: {test_name} p-value = {p_value:.4f}\n")
 
     plt.tight_layout(rect=[0, 0, 1, 0.97])
     plt.suptitle('Mixed vs Participant Model Comparisons (All Versions)', y=0.995)

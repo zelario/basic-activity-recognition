@@ -144,7 +144,7 @@ def outlier_density_iqr(dataset, variables_modules):
             densities[index] = density
             print_and_log(f"Activity {activity}: {density:.2f}% ({np.sum(outliers)}/{activity_modules.size})")
 
-def remove_outliers(dataset, variables_modules):
+def remove_outliers(dataset):
     """Remove z-score outliers from the dataset for all variable modules.
 
     Parameters
@@ -158,6 +158,8 @@ def remove_outliers(dataset, variables_modules):
     -------
     cleaned_dataset : matrix
         Dataset with outlier samples removed."""
+    
+    variables_modules = compute_modules(dataset)
     
     outlier_mask = np.zeros(dataset.shape[0], dtype=bool)
 

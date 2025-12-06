@@ -93,18 +93,8 @@ def reload_data():
     
     try:
         dataset = np.load("npy/dataset.npy", allow_pickle=True)
-        features = np.load("npy/features.npy", allow_pickle=True)
-        labels = np.load("npy/feature_labels.npy", allow_pickle=True)
     except FileNotFoundError:
         dataset = load_data()
-        variables_modules = compute_modules(dataset)
-        dataset_copy = dataset.copy()
-        dataset_copy = remove_outliers(dataset_copy, variables_modules)
-
-        features, labels = extract_features(dataset, window_duration=5.0, overlap=0.5)
-
         np.save("npy/dataset.npy", dataset)
-        np.save("npy/features.npy", features)
-        np.save("npy/feature_labels.npy", labels)
 
-    return dataset, features, labels
+    return dataset

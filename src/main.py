@@ -56,9 +56,9 @@ def moduleA ():
 
     # --- Exercise 4.2: Feature Extraction ---
 
-    dataset = remove_outliers(dataset, variables_modules)
+    '''dataset = remove_outliers(dataset, variables_modules)'''
     
-    features, labels = extract_features(dataset, window_duration=5.0, overlap=0.5)
+    features, labels = compute_features(dataset, window_duration=5.0, overlap=0.5)
     features = zscore_normalization(features)
 
     # --- Exercise 4.3: PCA ---
@@ -82,7 +82,11 @@ def moduleB ():
 
     # --- Pre game dataset loading and preprocessing ---
 
-    dataset, features, labels = reload_data()
+    dataset = reload_data()
+    
+    '''dataset = remove_outliers(dataset)'''
+
+    features, labels = compute_features(dataset, window_duration=5.0, overlap=0.5)
     features, labels = discard_activities(features=features, labels=labels)
     
     '''# --- Exercise 1.1: Analyse sample balance ---
@@ -122,9 +126,11 @@ def moduleB ():
     knn_model = sklearn_knn_classifier(pipeline["train"][ "features"]["a"], pipeline["train"]["labels"], k=k)
     metrics = validate_model(knn_model, pipeline["validate"]["features"]["a"], pipeline["validate"]["labels"], k=k)'''
 
-    # --- Exercise 5.1: Hyperparameter Tuning ---
+    '''# --- Exercise 5.1: Hyperparameter Tuning ---
 
     hyperparemeter_tuning(features, embeddings, labels, k_values=[1, 3, 5, 7, 9, 11, 17, 19], n_splits=10)
+
+    print_metrics_summary()'''
 
     '''# --- Exercise 5.2: Hypothesis Testing ---
 
@@ -137,8 +143,10 @@ def moduleB ():
 
     model = deployment_model(features, labels, k=19)
 
-    sample = get_random_sample(dataset)
-    classify_sample(model, sample)
+    sample, label = get_synthetic_sample(dataset)
+    classify_sample(model, sample, label)
+
+    test_deployment_model(dataset, model)
 
 if __name__ == "__main__":
 

@@ -149,8 +149,8 @@ def sliding_windows(dataset, window_duration, overlap):
 
     return windows
 
-def compute_features(signal):
-    """Compute features for a window.
+def extract_features(signal):
+    """Extract features for a window.
 
     Features (in order): mean, std, median, variance, rms, average deviation, skewness, 
     kurtosis, IQR, zero crossing rate, mean crossing rate, spectral entropy.
@@ -198,7 +198,7 @@ def compute_features(signal):
 
     return feature_values
 
-def extract_features(dataset, window_duration=5.0, overlap=0.5):
+def compute_features(dataset, window_duration=5.0, overlap=0.5, reload=True):
     """Extract features per window for acceleration, gyroscope, and magnetometer modules.
 
     Parameters
@@ -218,8 +218,16 @@ def extract_features(dataset, window_duration=5.0, overlap=0.5):
         Feature matrix, one row per valid window.
     labels : matrix, shape (n_windows, 3)
         Integer matrix: (activity_label, participant_id, device_id) for each window."""
+    
+    if reload:
+        try:
+            features = np.load("npy/features.npy", allow_pickle=True)
+            labels = np.load("npy/features_labels.npy", allow_pickle=True)
+            return features, labels
+        except FileNotFoundError:
+            pass 
 
-    # Create windows
+    # Compute features if not reloading or files not found
     windows = sliding_windows(dataset, window_duration, overlap)
 
     features = []
@@ -245,15 +253,15 @@ def extract_features(dataset, window_duration=5.0, overlap=0.5):
         mag_z = window_data[:, 9]
 
         # Extract features for each axis
-        acc_x_features = compute_features(acc_x)
-        acc_y_features = compute_features(acc_y)
-        acc_z_features = compute_features(acc_z)
-        gyro_x_features = compute_features(gyro_x)
-        gyro_y_features = compute_features(gyro_y)
-        gyro_z_features = compute_features(gyro_z)
-        mag_x_features = compute_features(mag_x)
-        mag_y_features = compute_features(mag_y)
-        mag_z_features = compute_features(mag_z)
+        acc_x_features = extract_features(acc_x)
+        acc_y_features = extract_features(acc_y)
+        acc_z_features = extract_features(acc_z)
+        gyro_x_features = extract_features(gyro_x)
+        gyro_y_features = extract_features(gyro_y)
+        gyro_z_features = extract_features(gyro_z)
+        mag_x_features = extract_features(mag_x)
+        mag_y_features = extract_features(mag_y)
+        mag_z_features = extract_features(mag_z)
 
         # Combine all features (order: acc_x, acc_y, acc_z, gyro_x, gyro_y, gyro_z, mag_x, mag_y, mag_z)
         combined_features = (
@@ -269,6 +277,10 @@ def extract_features(dataset, window_duration=5.0, overlap=0.5):
 
     features = np.array(features)
     labels = np.array(labels)
+
+    if reload:
+        np.save("npy/features.npy", features)
+        np.save("npy/features_labels.npy", labels)
 
     return features, labels
 
