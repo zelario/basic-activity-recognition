@@ -174,11 +174,11 @@ def print_metrics_summary(activity_count=7):
     headers = ["Model", "Acc Mean", "Acc Std", "Prec Mean", "Prec Std",
                "Recall Mean", "Recall Std", "F1 Mean", "F1 Std", "Mode k"]
 
-    print("\n=== Models' Metrics Summary ===\n")
-    print("{:<45} {:>8} {:>8} {:>10} {:>10} {:>12} {:>12} {:>10} {:>10} {:>7}".format(*headers))
+    print_and_log("\n=== Models' Metrics Summary ===\n")
+    print_and_log("{:<45} {:>8} {:>8} {:>10} {:>10} {:>12} {:>12} {:>10} {:>10} {:>7}".format(*headers))
 
     for row in summary_rows:
-        print("{:<45} {:>8.4f} {:>8.4f} {:>10.4f} {:>10.4f} {:>12.4f} {:>12.4f} {:>10.4f} {:>10.4f} {:>7}".format(
+        print_and_log("{:<45} {:>8.4f} {:>8.4f} {:>10.4f} {:>10.4f} {:>12.4f} {:>12.4f} {:>10.4f} {:>10.4f} {:>7}".format(
             row[0], row[1], row[2], row[3], row[4], row[5], row[6], row[7], row[8], row[9]
         ))
 
@@ -200,12 +200,12 @@ def print_metrics_summary(activity_count=7):
 
     activity_headers = [f"Act{i+1} %" for i in range(activity_count)]
 
-    print("\n=== Per Activity Accuracy Table (%) ===\n")
-    print("{:<45} ".format("Model") + " ".join(["{:>8}".format(h) for h in activity_headers]))
+    print_and_log("\n=== Per Activity Accuracy Table (%) ===\n")
+    print_and_log("{:<45} ".format("Model") + " ".join(["{:>8}".format(h) for h in activity_headers]))
 
     for idx, row in enumerate(activity_acc_table):
         name = MODEL_NAMES[idx]
-        print("{:<45} ".format(name) + " ".join(["{:>8.2f}".format(val) for val in row]))
+        print_and_log("{:<45} ".format(name) + " ".join(["{:>8.2f}".format(val) for val in row]))
 
 # --- Exercise 5.2: Results Report ---
 
