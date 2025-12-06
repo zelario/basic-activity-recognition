@@ -16,7 +16,7 @@ from models import *
 import numpy as np
 from augmentation import *
 
-def get_synthetic_sample(dataset, noise_std=0.01, activity=None, participant=None, device=None):
+def get_synthetic_sample(dataset, noise_std=0.03, activity=None, participant=None, device=None):
     """Generate a synthetic sample by selecting 256 consecutive rows from real data and adding noise.
 
     Parameters

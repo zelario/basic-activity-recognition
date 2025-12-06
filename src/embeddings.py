@@ -79,8 +79,8 @@ def compute_embeddings(dataset, fs=51.5, window_duration=5.0, overlap_ratio=0.5)
         Labels for each window: [activity, participant]."""
     
     try:
-        embeddings = np.load("npy/embeddings.npy", allow_pickle=True)
-        embeddings_labels = np.load("npy/embedding_labels.npy", allow_pickle=True)
+        embeddings = np.load("cache/embeddings.npy", allow_pickle=True)
+        embeddings_labels = np.load("cache/embedding_labels.npy", allow_pickle=True)
         return embeddings, embeddings_labels
     
     except FileNotFoundError:
@@ -120,8 +120,8 @@ def compute_embeddings(dataset, fs=51.5, window_duration=5.0, overlap_ratio=0.5)
 
         labels = np.array(labels)
 
-        np.save("npy/embeddings.npy", embeddings)
-        np.save("npy/embedding_labels.npy", labels)
+        np.save("cache/embeddings.npy", embeddings)
+        np.save("cache/embedding_labels.npy", labels)
 
         return embeddings, labels
     

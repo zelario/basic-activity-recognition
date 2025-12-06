@@ -56,7 +56,7 @@ def moduleA ():
 
     # --- Exercise 4.2: Feature Extraction ---
 
-    '''dataset = remove_outliers(dataset, variables_modules)'''
+    dataset = remove_outliers(dataset, variables_modules)
     
     features, labels = compute_features(dataset, window_duration=5.0, overlap=0.5)
     features = zscore_normalization(features)
@@ -84,7 +84,7 @@ def moduleB ():
 
     dataset = reload_data()
 
-    '''dataset = remove_outliers(dataset)'''
+    dataset = remove_outliers(dataset)
 
     features, labels = compute_features(dataset, window_duration=5.0, overlap=0.5)
     features, labels = discard_activities(features=features, labels=labels)
@@ -130,14 +130,14 @@ def moduleB ():
 
     #hyperparemeter_tuning(features, embeddings, labels, k_values=[1, 3, 5, 7, 9, 11, 17, 19], n_splits=10)
 
-    #print_metrics_summary()
+    print_metrics_summary()
 
-    '''# --- Exercise 5.2: Hypothesis Testing ---
+    # --- Exercise 5.2: Hypothesis Testing ---
 
     paired_hypothesis_test("mixed", chosen_metric="f1_score")
     paired_hypothesis_test("participant", chosen_metric="f1_score")
 
-    independent_hypothesis_test(chosen_metric="f1_score")'''
+    independent_hypothesis_test(chosen_metric="f1_score")
 
     # --- Exercise 6: Deployment ---
 
@@ -146,7 +146,7 @@ def moduleB ():
     sample, label = get_synthetic_sample(dataset)
     classify_sample(model, sample, label)
 
-    test_deployment_model(dataset, model, n=1000)
+    test_deployment_model(dataset, model, n=100)
 
 if __name__ == "__main__":
 

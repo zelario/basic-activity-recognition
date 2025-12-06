@@ -118,14 +118,14 @@ def hyperparemeter_tuning(features, embeddings, labels, k_values=[1], n_splits=1
                     # Keep metrics and labels
                     metrics[(method, type, scenario)].append((iteration_metrics, best_k))
 
-                    print_and_log(f"=FINAL= Method: {method}, Type: {type}, Scenario: {scenario}, Split= {split_number}, k= {best_k}, Accuracy: {iteration_metrics['accuracy']:.4f}", path="log/hyperparameter_tuning.log")
+                    print_and_log(f"Method: {method}, Type: {type}, Scenario: {scenario}, Split= {split_number}, k= {best_k}, Accuracy: {iteration_metrics['accuracy']:.4f}")
 
-    np.save("npy/metrics.npy", metrics)
+    np.save("cache/metrics.npy", metrics)
 
 def print_metrics_summary(activity_count=7):
 
     try:
-        metrics = np.load("npy/metrics.npy", allow_pickle=True).item()
+        metrics = np.load("cache/metrics.npy", allow_pickle=True).item()
     except FileNotFoundError:
         print_and_log("Metrics file not found. Please run hyperparameter_tuning() first.")
         return
@@ -243,7 +243,7 @@ def paired_hypothesis_test(method, metrics=None, chosen_metric='accuracy'):
         Metric to compare (default='accuracy')."""
 
     try:
-        metrics = np.load("npy/metrics.npy", allow_pickle=True).item()
+        metrics = np.load("cache/metrics.npy", allow_pickle=True).item()
     except FileNotFoundError:
         print_and_log("Metrics file not found. Please run hyperparameter_tuning() first.")
         return
@@ -312,7 +312,7 @@ def independent_hypothesis_test(metrics=None, chosen_metric='accuracy'):
         Metric to compare (default='accuracy')."""
 
     try:
-        metrics = np.load("npy/metrics.npy", allow_pickle=True).item()
+        metrics = np.load("cache/metrics.npy", allow_pickle=True).item()
     except FileNotFoundError:
         print_and_log("Metrics file not found. Please run hyperparameter_tuning() first.")
         return

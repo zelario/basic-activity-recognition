@@ -221,8 +221,8 @@ def compute_features(dataset, window_duration=5.0, overlap=0.5, reload=True):
     
     if reload:
         try:
-            features = np.load("npy/features.npy", allow_pickle=True)
-            labels = np.load("npy/features_labels.npy", allow_pickle=True)
+            features = np.load("cache/features.npy", allow_pickle=True)
+            labels = np.load("cache/features_labels.npy", allow_pickle=True)
             return features, labels
         except FileNotFoundError:
             pass 
@@ -279,8 +279,8 @@ def compute_features(dataset, window_duration=5.0, overlap=0.5, reload=True):
     labels = np.array(labels)
 
     if reload:
-        np.save("npy/features.npy", features)
-        np.save("npy/features_labels.npy", labels)
+        np.save("cache/features.npy", features)
+        np.save("cache/features_labels.npy", labels)
 
     return features, labels
 

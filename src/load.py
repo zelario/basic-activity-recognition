@@ -54,12 +54,12 @@ def load_data():
         Matrix of loaded dataset from all parts and devices."""
     
     try:
-        dataset = np.load("npy/dataset.npy", allow_pickle=True)
+        dataset = np.load("cache/dataset.npy", allow_pickle=True)
         return dataset
     except FileNotFoundError:
         full_dataset = [load_part_data(i) for i in range(14)]
         dataset = np.concatenate(full_dataset, axis=0)
-        np.save("npy/dataset.npy", dataset)
+        np.save("cache/dataset.npy", dataset)
         return dataset
     
 def save_data(dataset, features, labels):
@@ -74,9 +74,9 @@ def save_data(dataset, features, labels):
     labels : np.ndarray, shape (n_windows, 2)
         Integer array: column 0 is activity, column 1 is participant ID."""
     
-    np.save("npy/dataset.npy", dataset)
-    np.save("npy/features.npy", features)
-    np.save("npy/feature_labels.npy", labels)
+    np.save("cache/dataset.npy", dataset)
+    np.save("cache/features.npy", features)
+    np.save("cache/feature_labels.npy", labels)
     
 def reload_data():
     """Load or recompute cached feature artifacts from the `data/` folder.
@@ -92,9 +92,9 @@ def reload_data():
         Integer array: column 0 is activity, column 1 is participant ID."""
     
     try:
-        dataset = np.load("npy/dataset.npy", allow_pickle=True)
+        dataset = np.load("cache/dataset.npy", allow_pickle=True)
     except FileNotFoundError:
         dataset = load_data()
-        np.save("npy/dataset.npy", dataset)
+        np.save("cache/dataset.npy", dataset)
 
     return dataset
