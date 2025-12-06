@@ -138,22 +138,23 @@ def prepare_pipeline(split):
     # === Scenario a: All features/embeddings ===
 
     # Unpack datasets
-    train_features_all, train_embeddings_all, train_labels = split["train"]
-    validate_features_all, validate_embeddings_all, validate_labels = split["validate"]
+    train_features, train_embeddings, train_labels = split["train"]
+    validate_features, validate_embeddings, validate_labels = split["validate"]
 
-    combined_features_all = np.concatenate([train_features_all, validate_features_all], axis=0)
-    combined_embeddings_all = np.concatenate([train_embeddings_all, validate_embeddings_all], axis=0)
-    combined_labels_all = np.concatenate([train_labels, validate_labels], axis=0)
-    test_features_all, test_embeddings_all, test_labels = split["test"]
+    combined_features = np.concatenate([train_features, validate_features], axis=0)
+    combined_embeddings = np.concatenate([train_embeddings, validate_embeddings], axis=0)
+    combined_labels = np.concatenate([train_labels, validate_labels], axis=0)
+    
+    test_features, test_embeddings, test_labels = split["test"]
 
     # === Scenario b: PCA-reduced features and embeddings (90% variance) ===
 
     # Normalize training and combined features and embeddings
-    normalized_train_features, train_features_means, train_features_stds = zscore_normalization(train_features_all, return_parameters=True)
-    normalized_train_embeddings, train_embeddings_means, train_embeddings_stds = zscore_normalization(train_embeddings_all, return_parameters=True)
+    normalized_train_features, train_features_means, train_features_stds = zscore_normalization(train_features, return_parameters=True)
+    normalized_train_embeddings, train_embeddings_means, train_embeddings_stds = zscore_normalization(train_embeddings, return_parameters=True)
 
-    normalized_combined_features, combined_features_means, combined_features_stds = zscore_normalization(combined_features_all, return_parameters=True)
-    normalized_combined_embeddings, combined_embeddings_means, combined_embeddings_stds = zscore_normalization(combined_embeddings_all, return_parameters=True)
+    normalized_combined_features, combined_features_means, combined_features_stds = zscore_normalization(combined_features, return_parameters=True)
+    normalized_combined_embeddings, combined_embeddings_means, combined_embeddings_stds = zscore_normalization(combined_embeddings, return_parameters=True)
 
     # Compute PCA on normalized training and combined features and embeddings
     train_features_pca, explained_variance_train_features, pca_object_train_features = compute_pca(normalized_train_features)
@@ -183,8 +184,8 @@ def prepare_pipeline(split):
     combined_embeddings_pca = combined_embeddings_pca[:, :n_components_90_embeddings_combined]
 
     # Apply normalization to validate set
-    normalized_validate_features = zscore_normalization(validate_features_all, mean_values=train_features_means, std_values=train_features_stds)
-    normalized_validate_embeddings = zscore_normalization(validate_embeddings_all, mean_values=train_embeddings_means, std_values=train_embeddings_stds)
+    normalized_validate_features = zscore_normalization(validate_features, mean_values=train_features_means, std_values=train_features_stds)
+    normalized_validate_embeddings = zscore_normalization(validate_embeddings, mean_values=train_embeddings_means, std_values=train_embeddings_stds)
 
     # Project validate set using PCA fitted on training set
     validate_features_pca = compute_pca(normalized_validate_features, pca_object=pca_object_train_features)
@@ -194,8 +195,8 @@ def prepare_pipeline(split):
     validate_embeddings_pca = validate_embeddings_pca[:, :n_components_90_train_embeddings]
 
     # Apply normalization to test set
-    normalized_test_features = zscore_normalization(test_features_all, mean_values=combined_features_means, std_values=combined_features_stds)
-    normalized_test_embeddings = zscore_normalization(test_embeddings_all, mean_values=combined_embeddings_means, std_values=combined_embeddings_stds)
+    normalized_test_features = zscore_normalization(test_features, mean_values=combined_features_means, std_values=combined_features_stds)
+    normalized_test_embeddings = zscore_normalization(test_embeddings, mean_values=combined_embeddings_means, std_values=combined_embeddings_stds)
 
     # Project test set using PCA fitted on training set
     test_features_pca = compute_pca(normalized_test_features, pca_object=pca_object_combined_features)
@@ -210,8 +211,8 @@ def prepare_pipeline(split):
     top_15_train_features_indices = relief(normalized_train_features, train_labels, top_n=15, print_output=False)
     top_15_train_embeddings_indices = relief(normalized_train_embeddings, train_labels, top_n=15, print_output=False)
 
-    top_15_combined_features_indices = relief(normalized_combined_features, combined_labels_all, top_n=15, print_output=False)
-    top_15_combined_embeddings_indices = relief(normalized_combined_embeddings, combined_labels_all, top_n=15, print_output=False)
+    top_15_combined_features_indices = relief(normalized_combined_features, combined_labels, top_n=15, print_output=False)
+    top_15_combined_embeddings_indices = relief(normalized_combined_embeddings, combined_labels, top_n=15, print_output=False)
 
     # Apply feature selection to all splits
     train_features_relief = normalized_train_features[:, top_15_train_features_indices]
@@ -228,12 +229,12 @@ def prepare_pipeline(split):
     pipeline = {
         "train": {
             "features": {
-                "a": np.array(train_features_all),
+                "a": np.array(normalized_train_features),
                 "b": np.array(train_features_pca),
                 "c": np.array(train_features_relief)
             },
             "embeddings": {
-                "a": np.array(train_embeddings_all),
+                "a": np.array(train_embeddings),
                 "b": np.array(train_embeddings_pca),
                 "c": np.array(train_embeddings_relief)
             },
@@ -241,12 +242,12 @@ def prepare_pipeline(split):
         },
         "validate": {
             "features": {
-                "a": np.array(validate_features_all),
+                "a": np.array(normalized_validate_features),
                 "b": np.array(validate_features_pca),
                 "c": np.array(validate_features_relief)
             },
             "embeddings": {
-                "a": np.array(validate_embeddings_all),
+                "a": np.array(validate_embeddings),
                 "b": np.array(validate_embeddings_pca),
                 "c": np.array(validate_embeddings_relief)
             },
@@ -254,25 +255,25 @@ def prepare_pipeline(split):
         },
         "combined": {
             "features": {
-                "a": np.array(combined_features_all),
+                "a": np.array(normalized_combined_features),
                 "b": np.array(combined_features_pca),
                 "c": np.array(combined_features_relief)
             },
             "embeddings": {
-                "a": np.array(combined_embeddings_all),
+                "a": np.array(combined_embeddings),
                 "b": np.array(combined_embeddings_pca),
                 "c": np.array(combined_embeddings_relief)
             },
-            "labels": np.array(combined_labels_all)
+            "labels": np.array(combined_labels)
         },
         "test": {
             "features": {
-                "a": np.array(test_features_all),
+                "a": np.array(normalized_test_features),
                 "b": np.array(test_features_pca),
                 "c": np.array(test_features_relief)
             },
             "embeddings": {
-                "a": np.array(test_embeddings_all),
+                "a": np.array(test_embeddings),
                 "b": np.array(test_embeddings_pca),
                 "c": np.array(test_embeddings_relief)
             },
