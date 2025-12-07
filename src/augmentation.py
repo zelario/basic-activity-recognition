@@ -192,8 +192,7 @@ def augment_train_dataset(train_dataset):
 # --- Exercise 1.3: Visualize Synthetic vs Real Samples ---
 
 def plot_synthetic_vs_real(features, labels, synthetic_features, activity=4, participant=3):
-	"""
-	Visualize real and synthetic samples using a 2D scatter plot of the first two features.
+	"""Visualize real and synthetic samples using a 2D scatter plot of the first two features.
 
 	Parameters
 	----------
@@ -211,8 +210,7 @@ def plot_synthetic_vs_real(features, labels, synthetic_features, activity=4, par
 	Returns
 	-------
 	None
-		Displays a scatter plot of real and synthetic samples.
-	"""
+		Displays a scatter plot of real and synthetic samples."""
 	
 	plt.figure(figsize=(8, 6))
 

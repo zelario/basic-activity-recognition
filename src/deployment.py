@@ -16,7 +16,7 @@ from models import *
 import numpy as np
 from augmentation import *
 
-def get_synthetic_sample(dataset, noise_std=0.03, activity=None, participant=None, device=None):
+def get_synthetic_sample(dataset, noise_std=0.1, activity=None, participant=None, device=None):
     """Generate a synthetic sample by selecting 256 consecutive rows from real data and adding noise.
 
     Parameters
@@ -71,7 +71,17 @@ def deployment_model(dataset, labels, k=19):
 
     Parameters
     ----------
-    train_dataset : matrix"""
+    dataset : matrix
+        Array of shape (n_samples, n_features) with training features.
+    labels : matrix
+        Array of shape (n_samples, n_labels) with training labels.
+    k : int 
+        Number of neighbors for k-NN.
+
+    Returns
+    -------
+    model : tuple
+        Trained k-NN model along with normalization parameters (means, stds)."""
 
     # Apply activity augmentation
     dataset, labels = augment_dataset(dataset, labels)
@@ -97,7 +107,11 @@ def classify_sample(model, sample, label):
     ----------
     sample_dataset : matrix, shape (256, 9)
         Array of shape (256, 9) with sensor data to classify.
-    """
+    
+    Returns
+    -------
+    predicted_label : int
+        Predicted activity label for the sample dataset."""
 
     knn_model, means, stds = model
 
@@ -124,7 +138,16 @@ def classify_sample(model, sample, label):
     return predicted_label
 
 def test_deployment_model(dataset, model, n=100):
-    """Test the deployment model with a synthetic sample."""
+    """Test the deployment model with a synthetic sample.
+
+    Parameters
+    ----------
+    dataset : matrix
+        Raw dataset (n_rows, 13 columns)
+    model : tuple
+        Trained k-NN model along with normalization parameters (means, stds).
+    n : int
+        Number of synthetic samples to test."""
 
     real_labels = []
     predicted_labels = []
