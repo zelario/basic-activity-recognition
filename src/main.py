@@ -56,9 +56,9 @@ def moduleA ():
 
     # --- Exercise 4.2: Feature Extraction ---
 
-    dataset = remove_outliers(dataset, variables_modules)
+    new_dataset = remove_outliers(dataset)
     
-    features, labels = compute_features(dataset, window_duration=5.0, overlap=0.5)
+    features, labels = compute_features(new_dataset, window_duration=5.0, overlap=0.5)
     features = zscore_normalization(features)
 
     # --- Exercise 4.3: PCA ---
@@ -89,7 +89,7 @@ def moduleB ():
     features, labels = compute_features(dataset, window_duration=5.0, overlap=0.5)
     features, labels = discard_activities(features=features, labels=labels)
     
-    '''# --- Exercise 1.1: Analyse sample balance ---
+    # --- Exercise 1.1: Analyse sample balance ---
 
     analyze_activity_balance(labels)
 
@@ -99,7 +99,7 @@ def moduleB ():
 
     # --- Exercise 1.3: Visualize Synthetic vs Real Samples ---
 
-    plot_synthetic_vs_real(features, labels, synthetic_features)'''
+    plot_synthetic_vs_real(features, labels, synthetic_features)
 
     # --- Exercise 2.1: Embeddings ---
 
@@ -108,27 +108,27 @@ def moduleB ():
 
     check_pairing(embeddings, features, labels, embedding_labels)
 
-    '''# --- Exercise 3.1: Mixed splitting ---
+    # --- Exercise 3.1: Mixed splitting ---
 
     split = mixed_splitting(features, embeddings, labels)
 
     # --- Exercise 3.2: Participant-based splitting ---
 
-    #split = participant_splitting(features, embeddings, labels)
+    '''split = participant_splitting(features, embeddings, labels)'''
 
     # --- Exercise 3.4: Pipeline training and evaluation ---
 
-    pipeline = prepare_pipeline(split["train"], split["validate"], split["test"])
+    pipeline = prepare_pipeline(split)
 
     # --- Exercise 4.1: knn classifier ---
 
     k=3
     knn_model = sklearn_knn_classifier(pipeline["train"][ "features"]["a"], pipeline["train"]["labels"], k=k)
-    metrics = validate_model(knn_model, pipeline["validate"]["features"]["a"], pipeline["validate"]["labels"], k=k)'''
+    metrics = validate_model(knn_model, pipeline["validate"]["features"]["a"], pipeline["validate"]["labels"], k=k)
 
     # --- Exercise 5.1: Hyperparameter Tuning ---
 
-    #hyperparemeter_tuning(features, embeddings, labels, k_values=[1, 3, 5, 7, 9, 11, 17, 19], n_splits=10)
+    '''hyperparemeter_tuning(features, embeddings, labels, k_values=[1, 3, 5, 7, 9, 11, 17, 19], n_splits=10)'''
 
     print_metrics_summary()
 
@@ -154,7 +154,7 @@ if __name__ == "__main__":
 
     #--- Run Part A Exercises ---
 
-    '''moduleA()'''
+    moduleA()
 
     #--- Run Part B Exercises ---
 

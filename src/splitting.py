@@ -97,19 +97,6 @@ def participant_splitting(features, embeddings, labels, train_n=9, validate_n=3,
 
     return split
 
-# --- Exercise 3.3: Discussion on splitting strategies ---
-
-'''A estratégia de divisão dentro de cada participante consiste em separar os dados de cada participante em conjuntos de treino, validação e teste. 
-Desta forma, o modelo é treinado, validado e testado com dados de todos os participantes, ou seja, ele tem sempre exemplos de cada pessoa durante o 
-treinamento. Isso pode superestimar o desempenho do modelo, pois ele pode aprender padrões específicos de cada participante e, assim, ter facilidade 
-para reconhecer dados semelhantes no conjunto de teste.
-
-Já a estratégia de divisão de participantes separa os participantes em grupos distintos para treino, validação e teste. O modelo é treinado apenas 
-com dados de um grupo de participantes e testado com dados de pessoas que ele nunca viu antes. Esta abordagem é mais rigorosa e representa melhor o 
-cenário real de uso, onde o modelo precisa generalizar para novos participantes. Portanto, a divisão entre participantes fornece uma estimativa mais 
-confiável do desempenho do modelo quando aplicado a dados de um novo participante desconhecido, pois avalia a capacidade de generalização e evita 
-que o modelo se beneficie de padrões individuais presentes no treino.'''
-
 # --- Exercise 3.4: Pipeline preparation ---
 
 def prepare_pipeline(split):
