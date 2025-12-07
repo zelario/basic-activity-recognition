@@ -10,13 +10,14 @@ This file contains functions used in the project for:
 - reporting results and statistical significance.
 """
 
-from log import print_and_log
-from models import sklearn_knn_classifier, validate_model
-from splitting import mixed_splitting, participant_splitting, prepare_pipeline
+from log import *
+from models import *
+from splitting import *
+from augmentation import *
+
 import numpy as np
 import matplotlib.pyplot as plt
 import seaborn as sns
-from augmentation import *
 from scipy.stats import kstest, mannwhitneyu, ttest_rel, ttest_ind, wilcoxon
 
 MODEL_NAMES = [

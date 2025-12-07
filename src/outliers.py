@@ -18,6 +18,7 @@ Column conventions expected in `dataset` matrix:
 """
 
 from log import *
+
 import numpy as np
 import matplotlib.pyplot as plt
 from sklearn.cluster import KMeans, DBSCAN

@@ -15,6 +15,7 @@ Column conventions expected in loaded arrays:
 from log import *
 from features import *
 from outliers import *
+
 import numpy as np
 import csv
 

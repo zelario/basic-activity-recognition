@@ -17,8 +17,9 @@ Column conventions expected in `dataset` arrays used by windowing functions:
 - Column 12: participant id 
 """
 
-from log import print_and_log
+from log import *
 from outliers import *
+
 import numpy as np
 import matplotlib.pyplot as plt
 from scipy.stats import kstest, f_oneway, kruskal

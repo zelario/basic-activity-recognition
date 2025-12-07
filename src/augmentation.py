@@ -205,12 +205,7 @@ def plot_synthetic_vs_real(features, labels, synthetic_features, activity=4, par
 	activity : int, optional
 		Activity ID to plot (default=4).
 	participant : int, optional
-		Participant ID to plot (default=3).
-
-	Returns
-	-------
-	None
-		Displays a scatter plot of real and synthetic samples."""
+		Participant ID to plot (default=3)."""
 	
 	plt.figure(figsize=(8, 6))
 

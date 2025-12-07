@@ -1,6 +1,17 @@
+"""
+Dataset splitting utilities.
+File used in Exercise 3.
+
+This module provides functions for:
+- Splitting features, embeddings, and labels into train/validate/test sets
+- Supporting mixed and participant-based splits
+- Ensuring consistent splits across all representations
+"""
+
+from features import *
+
 from sklearn.model_selection import train_test_split
 import numpy as np
-from features import *
 
 # --- Exercise 3.1: Mixed participant splitting ---
 

@@ -13,8 +13,9 @@ from features import *
 from outliers import *
 from embeddings import *
 from models import *
-import numpy as np
 from augmentation import *
+
+import numpy as np
 
 def get_synthetic_sample(dataset, noise_std=0.1, activity=None, participant=None, device=None):
     """Generate a synthetic sample by selecting 256 consecutive rows from real data and adding noise.

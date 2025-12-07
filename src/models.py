@@ -1,4 +1,15 @@
-from log import print_and_log
+"""
+Classification models and metrics utilities.
+File used in Exercise 4.
+
+This module provides functions for:
+- Training and using k-NN classifiers (custom and scikit-learn)
+- Evaluating classification performance with standard metrics
+- Printing and logging confusion matrices and scores
+"""
+ 
+from log import *
+
 import numpy as np
 from collections import Counter
 from sklearn.metrics import confusion_matrix, accuracy_score, precision_score, recall_score, f1_score
@@ -6,43 +17,29 @@ from sklearn.neighbors import KNeighborsClassifier
 
 # ---Exercise 4.1: K Nearest Neighbors---
 
-def knn_classifier(train_dataset, type="features", scenario='a', k=3):
-    """Returns a knn model trained on the selected scenario.
+def knn_classifier(train_dataset, train_labels, k=3):
+    """Returns a k-NN model trained on the provided dataset and labels (custom implementation).
     
     Parameters
     ----------
-    train_dataset : matrix
-        train dataset containing all scenarios datasets.
-    scenario : str
-        Scenario to use: 'a', 'b', or 'c'.
+    train_dataset : np.ndarray
+        Training feature matrix (n_samples, n_features).
+    train_labels : np.ndarray
+        Training labels (n_samples, n_labels). Only the first column is used for classification.
     k : int
         Number of neighbors to consider.
     
     Returns
     -------
     predict : function
-        Function that takes a validate dataset and returns predictions."""
-
-    scenario_indices = {'a': 0, 'b': 1, 'c': 2}
-
-    if type == "features":
-        train_scenario_data = train_dataset[scenario_indices[scenario]]
-    elif type == "embeddings":
-        train_scenario_data = train_dataset[scenario_indices[scenario] + 3]
+        Function that takes a validation dataset and returns predictions."""
 
     def predict(validate_dataset):
         prediction_labels = []
-
-        if type == "features":
-            validate_scenario_data = validate_dataset[scenario_indices[scenario]]
-        elif type == "embeddings":
-            validate_scenario_data = validate_dataset[scenario_indices[scenario] + 3]
-
-        # For each sample in validate, find k nearest neighbors in train
-        for sample in validate_scenario_data:
-            distances = np.linalg.norm(train_scenario_data - sample, axis=1)
+        for sample in validate_dataset:
+            distances = np.linalg.norm(train_dataset - sample, axis=1)
             nn_indices = np.argsort(distances)[:k]
-            nn_labels = train_dataset[4][nn_indices, 0]
+            nn_labels = train_labels[nn_indices, 0]
             most_common = Counter(nn_labels).most_common(1)[0][0]
             prediction_labels.append(most_common)
         return np.array(prediction_labels)

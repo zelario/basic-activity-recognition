@@ -1,8 +1,19 @@
+"""
+Embeddings computation and pairing utilities.
+File used in Exercise 2.
+
+This module provides functions for:
+- Loading a pretrained feature encoder from a public repository
+- Resampling raw sensor data for embedding extraction
+- Computing embeddings for sensor data using a sliding window approach
+- Checking pairing between embeddings, features, and labels
+"""
+
+from features import *
+from log import *
+
 import torch
 import numpy as np
-
-from features import sliding_windows
-from log import print_and_log
 
 ########################### PROVIDED CODE ###########################
 
