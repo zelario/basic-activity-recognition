@@ -232,7 +232,7 @@ def prepare_pipeline(split):
                 "c": np.array(train_features_relief)
             },
             "embeddings": {
-                "a": np.array(train_embeddings),
+                "a": np.array(normalized_train_embeddings),
                 "b": np.array(train_embeddings_pca),
                 "c": np.array(train_embeddings_relief)
             },
@@ -245,7 +245,7 @@ def prepare_pipeline(split):
                 "c": np.array(validate_features_relief)
             },
             "embeddings": {
-                "a": np.array(validate_embeddings),
+                "a": np.array(normalized_validate_embeddings),
                 "b": np.array(validate_embeddings_pca),
                 "c": np.array(validate_embeddings_relief)
             },
@@ -258,7 +258,7 @@ def prepare_pipeline(split):
                 "c": np.array(combined_features_relief)
             },
             "embeddings": {
-                "a": np.array(combined_embeddings),
+                "a": np.array(normalized_combined_embeddings),
                 "b": np.array(combined_embeddings_pca),
                 "c": np.array(combined_embeddings_relief)
             },
@@ -271,7 +271,7 @@ def prepare_pipeline(split):
                 "c": np.array(test_features_relief)
             },
             "embeddings": {
-                "a": np.array(test_embeddings),
+                "a": np.array(normalized_test_embeddings),
                 "b": np.array(test_embeddings_pca),
                 "c": np.array(test_embeddings_relief)
             },

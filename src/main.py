@@ -114,7 +114,7 @@ def moduleB ():
 
     # --- Exercise 3.2: Participant-based splitting ---
 
-    '''split = participant_splitting(features, embeddings, labels)'''
+    split = participant_splitting(features, embeddings, labels)
 
     # --- Exercise 3.4: Pipeline training and evaluation ---
 
@@ -146,7 +146,7 @@ def moduleB ():
     sample, label = get_synthetic_sample(dataset)
     classify_sample(model, sample, label)
 
-    test_deployment_model(dataset, model, n=100)
+    '''test_deployment_model(dataset, model, n=100)'''
 
 if __name__ == "__main__":
 
