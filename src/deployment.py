@@ -133,7 +133,7 @@ def classify_sample(model, sample, label):
     # Predict label using k-NN
     predicted_label = knn_model.predict(sample_features)[0]
 
-    print_and_log(f"Generating synthetic sample for activity {label[0]}")
+    print_and_log(f"Generating synthetic sample for activity: {label[0]}")
     print_and_log(f"Predicted label for the sample dataset: {predicted_label}")
 
     return predicted_label
