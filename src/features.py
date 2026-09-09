@@ -38,7 +38,7 @@ FEATURES_NAMES = [
     for feature in FEATURES
 ]
 
-# --- Exercise 4.1: Statistical Tests ---
+# ---  4.1: Statistical Tests ---
 
 def normality_and_significance(dataset, variables_modules, alpha=0.05):
     """Run normality checks per activity and perform a significance test.
@@ -318,7 +318,7 @@ def zscore_normalization(features, mean_values=None, std_values=None, return_par
     else:
         return features
 
-# --- Exercise 4.3: PCA ---
+# ---  4.3: PCA ---
 
 def compute_pca(dataset, pca_object=None):
     """Perform PCA and return projected data and explained variance ratio.
@@ -348,7 +348,7 @@ def compute_pca(dataset, pca_object=None):
         pca = pca_object.transform(dataset)
         return pca
 
-# --- Exercise 4.4: PCA Analysis  ---
+# ---  4.4: PCA Analysis  ---
 
 def analyse_pca(explained_variance_ratio):
     """Plot explained variance ratio and cumulative variance from PCA.
@@ -378,7 +378,7 @@ def analyse_pca(explained_variance_ratio):
     plt.tight_layout()
     plt.show()
 
-# --- Exercise 4.5: Fisher Scores and ReliefF ---
+# ---  4.5: Fisher Scores and ReliefF ---
 
 def fisher(features, labels):
     """Compute Fisher scores for features and print the top-ranked feature names.

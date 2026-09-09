@@ -208,7 +208,7 @@ def print_metrics_summary(activity_count=7):
         name = MODEL_NAMES[idx]
         print_and_log("{:<45} ".format(name) + " ".join(["{:>8.2f}".format(val) for val in row]))
 
-# --- Exercise 5.3: Hypothesis Testing ---
+# ---  5.3: Hypothesis Testing ---
 
 def paired_hypothesis_test(method, metrics=None, chosen_metric='accuracy'):
     """Perform paired hypothesis tests and KDE visualizations for all pairs of models within a method (mixed or participant).

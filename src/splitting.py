@@ -1,6 +1,6 @@
 """
 Dataset splitting utilities.
-File used in Exercise 3.
+File used in  3.
 
 This module provides functions for:
 - Splitting features, embeddings, and labels into train/validate/test sets
@@ -13,7 +13,7 @@ from features import *
 from sklearn.model_selection import train_test_split
 import numpy as np
 
-# --- Exercise 3.1: Mixed participant splitting ---
+# ---  3.1: Mixed participant splitting ---
 
 def mixed_splitting(features, embeddings, labels, seed=67, increment=0):
     """Split features, embeddings, and labels into training, validate, and test sets using mixed participant splitting.
@@ -53,7 +53,7 @@ def mixed_splitting(features, embeddings, labels, seed=67, increment=0):
 
     return split
 
-# --- Exercise 3.2: Participant-based splitting ---
+# ---  3.2: Participant-based splitting ---
 
 def participant_splitting(features, embeddings, labels, train_n=9, validate_n=3, test_n=3, seed=67, increment=0):
     """Split features, embeddings, and labels into training, validate, and test sets by participant groups.
@@ -108,7 +108,7 @@ def participant_splitting(features, embeddings, labels, train_n=9, validate_n=3,
 
     return split
 
-# --- Exercise 3.4: Pipeline preparation ---
+# ---  3.4: Pipeline preparation ---
 
 def prepare_pipeline(split):
     """Prepare three feature transformation scenarios for train, validate, and test sets:

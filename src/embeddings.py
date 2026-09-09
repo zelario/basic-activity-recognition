@@ -1,6 +1,6 @@
 """
 Embeddings computation and pairing utilities.
-File used in Exercise 2.
+File used in  2.
 
 This module provides functions for:
 - Loading a pretrained feature encoder from a public repository
@@ -63,7 +63,7 @@ def resample_to_30hz_5s(acc_xyz, fs_in_hz):
 
 # ======================== END OF PROVIDED CODE ========================
 
-# --- Exercise 2.1: Embeddings Computing ---
+# ---  2.1: Embeddings Computing ---
 
 def compute_embeddings(dataset, fs=51.5, window_duration=5.0, overlap_ratio=0.5):
     """Compute embeddings for the entire dataset using a sliding window approach.

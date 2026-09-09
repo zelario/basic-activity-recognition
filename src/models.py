@@ -1,6 +1,6 @@
 """
 Classification models and metrics utilities.
-File used in Exercise 4.
+File used in  4.
 
 This module provides functions for:
 - Training and using k-NN classifiers (custom and scikit-learn)
@@ -15,7 +15,7 @@ from collections import Counter
 from sklearn.metrics import confusion_matrix, accuracy_score, precision_score, recall_score, f1_score
 from sklearn.neighbors import KNeighborsClassifier
 
-# ---Exercise 4.1: K Nearest Neighbors---
+# --- 4.1: K Nearest Neighbors---
 
 def knn_classifier(train_dataset, train_labels, k=3):
     """Returns a k-NN model trained on the provided dataset and labels (custom implementation).
@@ -67,7 +67,7 @@ def sklearn_knn_classifier(train_dataset, train_labels, k=3):
 
     return model
 
-# --- Exercise 4.2: Classification Metrics ---
+# ---  4.2: Classification Metrics ---
 
 def validate_model(knn_model, validate_dataset, validate_labels, k=3, scenario=None, type=None, method=None):
     """Evaluate knn classifier on validate data.

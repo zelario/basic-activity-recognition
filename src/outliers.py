@@ -48,7 +48,7 @@ VARIABLE_NAMES = [
     "Magnetic Field (|Mag|)"
 ]
 
-# --- Exercise 3.1: Module Computation ---
+# ---  3.1: Module Computation ---
 
 def compute_modules(dataset):
     """Compute vector modules for acceleration, gyroscope, and magnetometer.

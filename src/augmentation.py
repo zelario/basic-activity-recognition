@@ -53,7 +53,7 @@ def discard_activities(features=None, pca=None, labels=None, embeddings=None):
 		mask = np.isin(labels[:, 0], valid_activities)
 		return pca[mask], labels[mask]
 
-# --- Exercise 1.1: Data Augmentation with SMOTE ---
+# ---  1.1: Data Augmentation with SMOTE ---
 
 def analyze_activity_balance(labels):
 	"""Analyze the balance of activity samples in the dataset and print sample counts per activity.
@@ -76,7 +76,7 @@ def analyze_activity_balance(labels):
 	for activity, count in zip(unique, counts):
 		print_and_log(f"Activity {activity}: {count} samples")
 
-# --- Exercise 1.2: Data Augmentation with SMOTE ---
+# ---  1.2: Data Augmentation with SMOTE ---
 
 def augment_activity_data(features, labels, activity=4, participant=3, n_samples=3):
 	"""Generate synthetic samples for a specific activity using SMOTE-like interpolation.
@@ -189,7 +189,7 @@ def augment_train_dataset(train_dataset):
 
 	return augmented_train_dataset
 
-# --- Exercise 1.3: Visualize Synthetic vs Real Samples ---
+# ---  1.3: Visualize Synthetic vs Real Samples ---
 
 def plot_synthetic_vs_real(features, labels, synthetic_features, activity=4, participant=3):
 	"""Visualize real and synthetic samples using a 2D scatter plot of the first two features.
