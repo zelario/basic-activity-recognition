@@ -34,21 +34,3 @@ activity-recognition/
 ├── src/
 └── README.md
 ```
-
-## Getting Started
-
-Install the required dependencies:
-
-```bash
-pip install -r requirements.txt
-```
-
-Then run the main Python script:
-
-```bash
-python src/main.py
-```
-
-## License
-
-This project is for educational purposes.
